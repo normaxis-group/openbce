@@ -1,0 +1,15 @@
+[project]
+name = "openbce"
+version = "0.1.0"
+description = "Moteur de calcul Th-BCE RE2020 libre"
+license = "AGPL-3.0-or-later"
+authors = [{ name = "ARKEMEP" }]
+requires-python = ">=3.11"
+dependencies = ["numpy"]
+
+[project.optional-dependencies]
+dev = ["pytest", "openpyxl"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

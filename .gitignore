@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# données météo : droit de redistribution à confirmer auprès de la DHUP
+donnees/
+# les RSEE de référence sont des données de clients : jamais dans le dépôt
+*.xml
