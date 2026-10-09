@@ -42,7 +42,7 @@ VERSIONS_PROTOCOLE = ("2025-06-18", "2025-03-26", "2024-11-05")
 PERIODE_PROGRESSION = 15.0                    # secondes
 RESERVES = ("OpenBCE n'est pas un logiciel évalué au sens du règlement d'évaluation des logiciels RE2020 : ses "
             "résultats ne sont pas opposables, ne valent ni attestation ni étude réglementaire. Précision mesurée sur "
-            "50 opérations réelles : Cep à -0,1 % en médiane, écart absolu médian 1,5 %, 48 dans ±10 % ; écarts connus "
+            "50 opérations réelles : Cep à -0,2 % en médiane, écart absolu médian 1,5 %, 49 dans ±10 % ; écarts connus "
             "sur le froid Th-C des logements climatisés et les PAC multiservices (docs/validation.md).")
 INSTRUCTIONS = ("Outils de recalcul d'études RE2020 à partir de leur RSEE (fichier XML). Commencer par lire_rsee pour "
                 "connaître le projet. calculer, comparer et variante lancent la simulation horaire : compter de 30 s à "

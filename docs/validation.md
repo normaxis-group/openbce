@@ -31,7 +31,7 @@ Le banc compare, poste par poste, ce que calcule OpenBCE aux sorties que porte l
   écart donnent les mêmes totaux, le banc ne peut pas les départager. Les références proviennent de plusieurs versions
   du moteur de référence (voir [rsee.md](rsee.md)).
 
-## Résultats au 08/10/2026
+## Résultats au 09/10/2026
 
 | Indicateur | Périmètre | Résultat |
 |---|---|---|
@@ -41,7 +41,7 @@ Le banc compare, poste par poste, ce que calcule OpenBCE aux sorties que porte l
 | Bbio_max et modulations | 732 groupes | Mbgeo exact partout ; DH_max exact sur 761 groupes |
 | Besoins d'eau chaude sanitaire | 182 groupes | rapport médian 1,002 à 1,003 |
 | DH, confort d'été | 12 groupes de 8 opérations | 8 dans ±10 %, biais de +10 à +15 % ; rafraîchissement adiabatique non modélisé |
-| Cep | 50 opérations (électricité, gaz, réseaux) | écart médian -0,1 % ; écart absolu médian 1,5 % ; 34 dans ±5 % ; 48 dans ±10 % |
+| Cep | 50 opérations (électricité, gaz, réseaux) | écart médian -0,2 % ; écart absolu médian 1,5 % ; 34 dans ±5 % ; 49 dans ±10 % ; seule hors de ±10 % : une opération dont le RSEE est incohérent (mensuels sans rapport avec l'annuel) |
 
 Le bilan du Cep est reproductible avec `python -m banc.cep_lot <dossier de RSEE>`.
 
@@ -110,7 +110,7 @@ renouvelable ; réseau 1 et 1 - RatENR ; fossiles 1), hors usages mobiliers (éq
 | Relances (8.5) : durées selon Type_Pgrm et l'indicateur de consigne du scénario | `emission.py`, `scenarios.py` | `banc.cep` | tests unitaires |
 | Double flux : statut de l'efficacité d'échangeur (certifié 2, justifié 1, déclaré 0), bypass selon θext et θi (6.3) | `ventilation.py`, `groupe.py` | `banc.cep` | cas 13 (ε 0,8) : besoin Th-C 8,1 -> 7,4 pour 6,4 |
 | Chaudières gaz et fioul (8.19) : rendements, pertes à l'arrêt, auxiliaires, ECS instantanée + chauffage, base ou appoint de ballon | `chaudiere.py`, `generateurs_ballon.py` | `banc.pac_chauffage`, `banc.ecs_cef` | 12 projets gaz (chauffage + ECS) : tous dans ±7 % ; ballon à base chaudière cas 14 -0 % ; assemblage à deux ballons (type 2) : cas 15 ECS -11 % |
-| Cep complet d'un projet (chauffage, froid, ECS, éclairage, auxiliaires, forfait froid, déplacements lus) | tous | `banc.cep_total`, `banc.cep_lot` | lot de 50 projets (électricité, gaz, réseaux) au 08/10/2026 : écart médian -0,1 %, |écart| médian 1,5 %, 34 dans ±5 %, 48 dans ±10 % ; hors : cas 16 (ECS d'un ballon sans source dans le RSEE, prise de la référence et signalée) et cas 15 (RSEE incohérent) |
+| Cep complet d'un projet (chauffage, froid, ECS, éclairage, auxiliaires, forfait froid, déplacements lus) | tous | `banc.cep_total`, `banc.cep_lot` | lot de 50 projets (électricité, gaz, réseaux) au 09/10/2026 : écart médian -0,2 %, \|écart\| médian 1,5 %, 34 dans ±5 %, 49 dans ±10 % ; hors : cas 15 (RSEE incohérent) ; cas 16 (ECS d'un ballon sans source dans le RSEE) prise de la référence et signalée, à -3 % |
 | Génération : contrat d'appel, effet joule direct (8.18) | `generateurs.py` | `banc.chauffage_mois` | identité vérifiée : O_Cef_ch = O_B_Ch sur 46 groupes effet joule du lot |
 | Besoin de chauffage Th-C (ventilation réelle, fuites de conduits, émission, relance) | `groupe.py`, `ventilation.py` | `banc.chauffage_mois` | 47 groupes effet joule : collectifs dans ±4 % après lecture « par défaut » de la classe d'étanchéité 3 ; restent les maisons de cas 17 (+9 à +13 %), cas 18 (+16 à +29 %) et cas 13 (+16 %) |
 | Consignes corrigées Th-C (8.1) : θvt appliqué seulement aux émetteurs de statut 2 (valeur par défaut écrite), θvs non appliqué, cibles de puissance corrigées en chaud et en froid | `emission.py`, `groupe.py` | `banc.cep` | tranché au banc contre la lettre du texte : bureaux cas 11 36,4/36,2, cas 19 +6 %, cas 04 +4 à +11 %, cas 03 +2 %, effet joule cas 20 +0/-3 % ; froid des logements climatisés encore -13 à -33 % |

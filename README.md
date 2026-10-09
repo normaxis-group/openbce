@@ -42,8 +42,8 @@ Il sert à relire et contrôler un calcul réglementaire, à étudier la sensibi
   naturelle et puits climatiques, PAC à sources eau et sol, bois et cogénération, systèmes sous Titre V, usages
   tertiaires autres que les bureaux.
 
-Résultats de validation au 08/10/2026, sur 50 opérations réelles : Cep à -0,1 % en médiane, écart absolu médian 1,5 %,
-48 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones. Détail, protocole et écarts connus :
+Résultats de validation au 09/10/2026, sur 50 opérations réelles : Cep à -0,2 % en médiane, écart absolu médian 1,5 %,
+49 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones. Détail, protocole et écarts connus :
 [docs/validation.md](docs/validation.md).
 
 ## Documentation
