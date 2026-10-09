@@ -4,8 +4,8 @@
 
     python -m banc.variantes <dossier de RSEE> <sortie.csv> [processus]
 
-Pour chaque projet (un fichier), le Bbio est recalculé par openBCE avec les données du RSEE puis avec une donnée
-modifiée à la fois. L'écart est pris entre deux calculs d'openBCE, jamais avec le RSEE : le biais du moteur s'annule
+Pour chaque projet (un fichier), le Bbio est recalculé par OpenBCE avec les données du RSEE puis avec une donnée
+modifiée à la fois. L'écart est pris entre deux calculs d'OpenBCE, jamais avec le RSEE : le biais du moteur s'annule
 en grande partie. Les leviers ne sont pas chiffrés : c'est un classement par points de Bbio, à croiser avec des coûts.
 """
 from __future__ import annotations

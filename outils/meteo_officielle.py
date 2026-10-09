@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 ARKEMEP
-"""Télécharge les données météorologiques conventionnelles de la RE2020 à leur source et les convertit pour openBCE.
+"""Télécharge les données météorologiques conventionnelles de la RE2020 à leur source et les convertit pour OpenBCE.
 
     python outils/meteo_officielle.py [sortie.npz]          # par défaut : donnees/meteo_re2020.npz
 
@@ -27,7 +27,7 @@ def main() -> None:
     sortie.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as d:
         classeur = Path(d) / "meteo_re2020.xlsx"
-        requete = urllib.request.Request(URL, headers={"User-Agent": "openBCE"})
+        requete = urllib.request.Request(URL, headers={"User-Agent": "OpenBCE"})
         with urllib.request.urlopen(requete, timeout=300) as r, open(classeur, "wb") as f:
             f.write(r.read())
         formes = meteo.convertir(classeur, sortie)

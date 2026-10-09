@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "Pour citer OpenBCE, merci d'utiliser les informations ci-dessous."
+title: "OpenBCE : moteur de calcul libre de la méthode Th-BCE 2020 (RE2020)"
+type: software
+authors:
+  - name: "ARKEMEP"
+version: "0.1.0"
+date-released: "2026-10-09"
+license: AGPL-3.0-or-later
+repository-code: "https://github.com/normaxis-group/openbce"
+abstract: >-
+  Mise en œuvre libre, écrite depuis le texte publié, de la méthode de calcul Th-BCE 2020 de la réglementation
+  environnementale RE2020 (annexe III de l'arrêté du 4 août 2021 modifié). Lit un RSEE, recalcule Bbio, Cep et DH,
+  et documente chaque lecture du texte. Logiciel non évalué : ses résultats ne sont pas opposables.
+keywords:
+  - RE2020
+  - Th-BCE 2020
+  - simulation thermique du bâtiment
+  - réglementation environnementale
+  - RSEE
