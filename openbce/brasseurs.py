@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from openbce import usages as mod_usages
+
 from .rsee import Noeud
 
 D_OP_1, D_OP_2, D_OP_3 = 2.0, 4.0, 1.0        # tableau 259, gestion manuelle
@@ -72,7 +74,7 @@ def delta_theta_op(types: list[TypeBrasseur], usage: int, occupe: bool, froid_au
             t.debit = max(t.q_int, t.debit)
         else:
             t.debit = t.q_max_corr
-        if usage in (1, 2) and nuit:
+        if usage in mod_usages.IHEBERGEMENT and nuit:                           # fiche 8.32, p. 1000
             t.debit = min(t.debit, t.q_int)                                      # acoustique la nuit en habitation
         if t.debit <= 0 or t.rat_surf <= 0 or volume <= 0:
             continue

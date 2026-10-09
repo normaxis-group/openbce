@@ -42,7 +42,7 @@ numéros d'équation et de tableau qu'il applique.
 | 5.13 | surventilation par ouverture des baies | `ouverture.py` | fait |
 | 5.17, 5.19 | parois opaques, ponts thermiques | `parois.py`, `enveloppe.py` | fait |
 | 5.2 à 5.4 | espaces tampons | | à faire |
-| 6.2, 6.3, 6.5 | ventilation mécanique : bouches, double flux, simple flux | `ventilation.py`, `ventilateurs.py` | fait en résidentiel ; tertiaire partiel |
+| 6.2, 6.3, 6.5 | ventilation mécanique : bouches, double flux, simple flux | `ventilation.py`, `ventilateurs.py` | fait en résidentiel ; tertiaire partiel ; débits conventionnels du Bbio des 28 usages (tableau 56-1) dans `groupe.py` |
 | 6.6 à 6.11 | ventilation naturelle et hybride, puits climatiques | | à faire |
 | 7.1 | éclairage | `eclairage.py` | fait |
 | 8.1, 8.5 | émission en chaud et en froid, relances | `emission.py` | fait |

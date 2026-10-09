@@ -13,9 +13,17 @@ from __future__ import annotations
 
 HIVER, MI_SAISON, ETE = 1, 2, 3
 TOP_LIM_MANU = 26.5          # °C, limite sur la température opérative maximale de la veille (nomenclature 5.9.2)
-P_OCC = {1: 0.5, 2: 0.7, 3: 0.5}     # part des baies en locaux occupés, par usage (figure 34) ; 3 = bureaux
-P_DEROG = {1: 0.25, 2: 0.25, 3: 0.25}
-FAMILLE = {1: "habitation", 2: "habitation", 3: "bureau"}
+# Figure 34 (annexe III 2026, p. 195 et 196) : part des baies en locaux occupés (Pocc), part dérogeant à la gestion
+# automatique (Pderog) et famille de matrices conventionnelles, par usage. Usages 1 à 3 validés au banc ; 4 à 28 lus
+# dans le texte, sans récapitulatif de référence.
+P_OCC = {1: 0.5, 2: 0.7, 3: 0.5, 4: 0.7, 5: 0.7, 6: 0.7, 7: 0.7, 8: 0.8, 9: 0.8, 10: 0.8, 11: 0.8, 12: 0.7, 13: 0.9, 14: 0.9, 15: 0.9,
+         16: 0.9, 17: 0.7, 18: 0.9, 19: 0.8, 20: 0.8, 21: 0.5, 22: 0.9, 23: 0.7, 24: 0.7, 25: 0.9, 26: 0.9, 27: 0.9, 28: 0.9}
+P_DEROG = {1: 0.25, 2: 0.25, 3: 0.25, 4: 0.4, 5: 0.4, 6: 0.4, 7: 0.4, 8: 0.25, 9: 0.25, 10: 0.25, 11: 0.25, 12: 0.4, 13: 0.1, 14: 0.1,
+           15: 0.1, 16: 0.1, 17: 0.1, 18: 0.0, 19: 0.25, 20: 0.25, 21: 0.25, 22: 0.0, 23: 0.1, 24: 0.1, 25: 0.0, 26: 0.1, 27: 0.1, 28: 0.0}
+FAMILLE = {1: "habitation", 2: "habitation", 3: "bureau", 4: "enseignement", 5: "enseignement", 6: "bureau", 7: "enseignement",
+           8: "habitation", 9: "habitation", 10: "bureau", 11: "bureau", 12: "enseignement", 13: "restauration", 14: "restauration",
+           15: "restauration", 16: "restauration", 17: "autre", 18: "autre", 19: "habitation", 20: "hopitaux", 21: "bureau",
+           22: "autre", 23: "autre", 24: "autre", 25: "autre", 26: "restauration", 27: "restauration", 28: "autre"}
 
 # Figure 35, volets. Par type de gestion (3 = manuelle non motorisée, 4 = manuelle motorisée, 2 et 1 = dérogation
 # manuelle sans et avec détecteur de présence), quatre situations : hiver, mi-saison, été frais, été chaud
@@ -70,11 +78,86 @@ INOCCUPATION_BUREAU = {
 }
 
 
+# Figure 37, volets, famille « enseignement » (p. 198).
+OCCUPATION_ENSEIGNEMENT = {
+    2: ((0.05, 80000, 0.20), (0.05, 100000, 0.20), (0.15, 80000, 0.20), (0.20, 60000, 0.20)),
+    1: ((0.05, 80000, 0.20), (0.05, 100000, 0.20), (0.15, 70000, 0.20), (0.20, 50000, 0.20)),
+    3: ((0.10, 80000, 0.90), (0.10, 100000, 0.90), (0.10, 80000, 0.90), (0.15, 60000, 0.90)),
+    4: ((0.05, 80000, 0.90), (0.05, 100000, 0.90), (0.15, 80000, 0.90), (0.20, 60000, 0.90)),
+}
+INOCCUPATION_ENSEIGNEMENT = {
+    3: ((0.10, 0.60), (0.10, 0.60), (0.20, 0.60), (0.30, 0.60)),
+    4: ((0.10, 0.90), (0.10, 0.90), (0.30, 0.90), (0.40, 0.90)),
+}
+# Figure 37-1, volets, famille « restauration » (p. 198).
+OCCUPATION_RESTAURATION = {
+    2: ((0.05, 150000, 0.10), (0.05, 150000, 0.10), (0.15, 150000, 0.10), (0.20, 150000, 0.10)),
+    1: ((0.05, 150000, 0.10), (0.05, 150000, 0.10), (0.15, 150000, 0.10), (0.20, 150000, 0.10)),
+    3: ((0.10, 150000, 0.10), (0.10, 150000, 0.10), (0.10, 150000, 0.10), (0.15, 150000, 0.10)),
+    4: ((0.05, 150000, 0.10), (0.05, 150000, 0.10), (0.15, 150000, 0.10), (0.20, 150000, 0.10)),
+}
+INOCCUPATION_RESTAURATION = {
+    3: ((0.05, 0.90), (0.10, 0.90), (0.20, 0.90), (0.40, 0.90)),
+    4: ((0.05, 0.90), (0.10, 0.90), (0.20, 0.90), (0.50, 0.90)),
+}
+# Figure 37-2, volets, famille « hôpitaux-nuit » (p. 199).
+OCCUPATION_HOPITAUX = {
+    2: ((0.10, 60000, 0.80), (0.10, 80000, 0.80), (0.20, 30000, 0.80), (0.30, 30000, 0.80)),
+    1: ((0.10, 60000, 0.90), (0.10, 80000, 0.90), (0.20, 20000, 0.90), (0.30, 20000, 0.90)),
+    3: ((0.15, 60000, 0.80), (0.15, 80000, 0.80), (0.20, 40000, 0.80), (0.25, 40000, 0.80)),
+    4: ((0.10, 60000, 0.90), (0.10, 80000, 0.90), (0.20, 30000, 0.90), (0.30, 30000, 0.90)),
+}
+INOCCUPATION_HOPITAUX = {
+    3: ((0.20, 0.70), (0.20, 0.70), (0.20, 0.70), (0.40, 0.70)),
+    4: ((0.10, 0.80), (0.10, 0.80), (0.20, 0.80), (0.50, 0.80)),
+}
+# Figure 37-3, volets, famille « autres usages » (p. 199) : 20 % de jour sous 200 000 lux, 80 % de nuit, en toute situation.
+OCCUPATION_AUTRE = {k: ((0.20, 200000, 0.80),) * 4 for k in (1, 2, 3, 4)}
+INOCCUPATION_AUTRE = {k: ((0.20, 0.80),) * 4 for k in (3, 4)}
+
+# Figure 40, stores enroulables, famille « enseignement » (p. 201).
+OCCUPATION_STORE_ENSEIGNEMENT = {
+    2: ((0.10, 60000, 0.15), (0.10, 80000, 0.15), (0.25, 30000, 0.15), (0.30, 30000, 0.15)),
+    1: ((0.10, 60000, 0.10), (0.10, 80000, 0.10), (0.25, 20000, 0.10), (0.30, 20000, 0.10)),
+    3: ((0.15, 60000, 0.10), (0.15, 80000, 0.10), (0.20, 40000, 0.10), (0.25, 40000, 0.10)),
+    4: ((0.10, 60000, 0.10), (0.10, 80000, 0.10), (0.25, 30000, 0.10), (0.30, 30000, 0.10)),
+}
+INOCCUPATION_STORE_ENSEIGNEMENT = {
+    3: ((0.15, 0.10), (0.15, 0.10), (0.25, 0.10), (0.30, 0.10)),
+    4: ((0.10, 0.10), (0.10, 0.10), (0.30, 0.10), (0.40, 0.10)),
+}
+# Figure 40-1, stores enroulables, famille « restauration » (p. 201).
+OCCUPATION_STORE_RESTAURATION = {
+    2: ((0.10, 60000, 0.15), (0.10, 80000, 0.15), (0.25, 30000, 0.20), (0.30, 30000, 0.20)),
+    1: ((0.10, 60000, 0.10), (0.10, 80000, 0.10), (0.25, 20000, 0.15), (0.30, 20000, 0.15)),
+    3: ((0.15, 60000, 0.10), (0.15, 80000, 0.10), (0.20, 40000, 0.10), (0.25, 40000, 0.10)),
+    4: ((0.10, 60000, 0.10), (0.10, 80000, 0.10), (0.25, 30000, 0.10), (0.30, 30000, 0.10)),
+}
+INOCCUPATION_STORE_RESTAURATION = {
+    3: ((0.15, 0.80), (0.15, 0.80), (0.25, 0.80), (0.30, 0.80)),
+    4: ((0.10, 0.90), (0.10, 0.90), (0.30, 0.90), (0.40, 0.90)),
+}
+# Figure 40-2, stores enroulables, famille « hôpitaux-nuit » (p. 202) : identique à la famille « bureau » (figure 39).
+OCCUPATION_STORE_HOPITAUX = OCCUPATION_STORE_BUREAU
+INOCCUPATION_STORE_HOPITAUX = INOCCUPATION_STORE_BUREAU
+# Figure 40-3, stores enroulables, famille « autres usages » (p. 202) : 20 % partout sous 200 000 lux.
+OCCUPATION_STORE_AUTRE = {k: ((0.20, 200000, 0.20),) * 4 for k in (1, 2, 3, 4)}
+INOCCUPATION_STORE_AUTRE = {k: ((0.20, 0.20),) * 4 for k in (3, 4)}
+
+MATRICES = {
+    "habitation": (OCCUPATION, INOCCUPATION, OCCUPATION_STORE, INOCCUPATION_STORE),
+    "bureau": (OCCUPATION_BUREAU, INOCCUPATION_BUREAU, OCCUPATION_STORE_BUREAU, INOCCUPATION_STORE_BUREAU),
+    "enseignement": (OCCUPATION_ENSEIGNEMENT, INOCCUPATION_ENSEIGNEMENT, OCCUPATION_STORE_ENSEIGNEMENT, INOCCUPATION_STORE_ENSEIGNEMENT),
+    "restauration": (OCCUPATION_RESTAURATION, INOCCUPATION_RESTAURATION, OCCUPATION_STORE_RESTAURATION, INOCCUPATION_STORE_RESTAURATION),
+    "hopitaux": (OCCUPATION_HOPITAUX, INOCCUPATION_HOPITAUX, OCCUPATION_STORE_HOPITAUX, INOCCUPATION_STORE_HOPITAUX),
+    "autre": (OCCUPATION_AUTRE, INOCCUPATION_AUTRE, OCCUPATION_STORE_AUTRE, INOCCUPATION_STORE_AUTRE),
+}
+
+
 def _matrices(usage: int, store: bool):
     """Matrices conventionnelles de gestion manuelle (occupation, inoccupation) selon la famille d'usage et le type."""
-    if FAMILLE[usage] == "habitation":
-        return (OCCUPATION_STORE, INOCCUPATION_STORE) if store else (OCCUPATION, INOCCUPATION)
-    return (OCCUPATION_STORE_BUREAU, INOCCUPATION_STORE_BUREAU) if store else (OCCUPATION_BUREAU, INOCCUPATION_BUREAU)
+    occ, inocc, occ_store, inocc_store = MATRICES[FAMILLE[usage]]
+    return (occ_store, inocc_store) if store else (occ, inocc)
 
 
 VENT_LIMITE_STORE = 10.0     # m/s : au-delà, un store extérieur est remonté (nomenclature 5.9.2, équations 190 et 191)
@@ -107,24 +190,26 @@ def _situation(saison: int, top_max_veille: float) -> int:
 
 # Tableau 34 (5.9.3.6) : en mode Th-D, en période de confort adaptatif et quand la température opérative maximale de la
 # veille dépasse TOP_LIM_MANU, les Rprot0 de la gestion manuelle sont forcés : de jour sous le seuil d'éclairement,
-# au moins 80 % (gestion motorisée) ou 70 % (autres) ; de nuit, au plus 70 % en résidentiel et 50 % ailleurs (volets),
-# 50 % partout pour les stores enroulables. Les seuils d'éclairement sont conservés.
-THD_JOUR = {4: 0.8}
-THD_JOUR_DEFAUT = 0.7
-THD_NUIT_VOLET = {"habitation": 0.7, "bureau": 0.5}
-THD_NUIT_STORE = 0.5
+# au moins 80 % (gestion motorisée) ou 70 % (autres) dans quatre familles, 70 % ou 60 % en restauration, 60 % dans les
+# « autres usages » ; de nuit, au plus 70 % ou 50 % selon la famille (volets), 50 % ou 70 % (stores enroulables). Les
+# seuils d'éclairement sont conservés. Familles 1 à 3 validées au banc ; les autres lues dans le texte 2026 (p. 216 et 217).
+THD_JOUR = {"habitation": {4: 0.8}, "bureau": {4: 0.8}, "enseignement": {4: 0.8}, "hopitaux": {4: 0.8}, "restauration": {4: 0.7}, "autre": {}}
+THD_JOUR_DEFAUT = {"habitation": 0.7, "bureau": 0.7, "enseignement": 0.7, "hopitaux": 0.7, "restauration": 0.6, "autre": 0.6}
+THD_NUIT_VOLET = {"habitation": 0.7, "bureau": 0.5, "enseignement": 0.5, "restauration": 0.7, "hopitaux": 0.5, "autre": 0.7}
+THD_NUIT_STORE = {"habitation": 0.5, "bureau": 0.5, "enseignement": 0.5, "restauration": 0.7, "hopitaux": 0.5, "autre": 0.7}
 
 
 def volet_manuel_thd(gpm_manu: int, usage: int, occupe: bool, eclairement: float, iocc_gpm: int = 1, store: bool = False) -> float:
     """Gestion manuelle en Th-D, confort adaptatif et veille chaude (203, 204) : matrices d'été forcées par le tableau 34."""
     occupation, inoccupation = _matrices(usage, store)
-    plancher = THD_JOUR.get(gpm_manu, THD_JOUR_DEFAUT)
+    famille = FAMILLE[usage]
+    plancher = THD_JOUR[famille].get(gpm_manu, THD_JOUR_DEFAUT[famille])
     r0, ecl_man, nuit = occupation[gpm_manu][3]
     r0 = max(plancher, r0)
-    nuit = min(THD_NUIT_STORE if store else THD_NUIT_VOLET[FAMILLE[usage]], nuit)
+    nuit = min((THD_NUIT_STORE if store else THD_NUIT_VOLET)[famille], nuit)
     jour = eclairement > 0 if iocc_gpm == 1 else iocc_gpm == 0
     r_inocc = inoccupation[gpm_manu][3][0 if jour else 1]
-    r_inocc = max(plancher, r_inocc) if jour else min(THD_NUIT_STORE if store else THD_NUIT_VOLET[FAMILLE[usage]], r_inocc)
+    r_inocc = max(plancher, r_inocc) if jour else min((THD_NUIT_STORE if store else THD_NUIT_VOLET)[famille], r_inocc)
     if not occupe:
         return r_inocc
     r_occ = (1.0 if eclairement >= ecl_man else r0 + (1 - r0) * eclairement / ecl_man) if jour else nuit

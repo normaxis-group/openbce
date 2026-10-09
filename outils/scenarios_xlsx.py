@@ -36,7 +36,7 @@ def _nombre(v):
     if isinstance(v, (int, float)):
         return float(v)
     try:
-        return float(str(v).replace(",", ".").strip())
+        return float(str(v).replace(",", ".").replace(";", ".").strip())  # « 0;5 » dans VES et GYM_MUN (semaine 3 d'août)
     except ValueError:
         return None
 

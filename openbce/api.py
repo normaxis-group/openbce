@@ -45,7 +45,10 @@ def calculer_rsee(chemin_entree: Path, chemin_sortie: Path) -> dict:
         resume.append(dict(batiment=bat["name"], sref=round(sref, 1), bbio_pts=round(bbio, 1), cep=round(bat["cep"]["cep_annuel"], 1),
                            cef=round(bat["cep"]["cef_annuel"], 1), dh_max_groupes=round(dh, 0),
                            bbio_max=[round(z["bbio_max"]["bbio_max"], 1) for z in bat["zones"] if z.get("bbio_max")]))
-    return dict(moteur="openbce", version=VERSION, batiments=resume)
+    from openbce import usages as mod_usages
+    presents = sorted({z["usage"] for bat in calcul["batiments"] for z in bat["zones"]})
+    return dict(moteur="openbce", version=VERSION, batiments=resume, usages=presents, usages_non_valides=mod_usages.non_valides(presents),
+                zones_ignorees=calcul.get("zones_ignorees", []), avertissement=mod_usages.avertissement(presents))
 
 
 class _Handler(BaseHTTPRequestHandler):

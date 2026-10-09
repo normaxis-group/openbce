@@ -24,7 +24,11 @@ CF = 0.45               # m/s²
 COR_CH = 1.1
 COR_EMOBCAB = 0.9
 
-BV = {2: 1600.0, 3: 1700.0}                      # voyages par personne et par an (tableau 311), par usage des RSEE
+# Besoin de voyages par personne et par an (tableau 310 de l'annexe III 2026, p. 1300 et 1301). Usages 2 et 3 : valeurs de
+# 2022 validées au banc (le texte 2026 porte 1 582,4 et 1 731,9) ; usage 1 absent du tableau.
+BV = {2: 1600.0, 3: 1700.0, 4: 804.0, 5: 1206.0, 6: 1608.0, 7: 1608.0, 8: 2920.0, 9: 2920.0, 10: 2920.0, 11: 2920.0, 12: 924.0,
+      13: 2190.0, 14: 510.0, 15: 1460.0, 16: 1248.0, 17: 4158.0, 18: 402.0, 19: 2190.0, 20: 4380.0, 21: 2920.0, 22: 7665.0,
+      23: 2190.0, 24: 1040.0, 25: 2680.0, 26: 402.0, 27: 1206.0, 28: 2680.0}
 RG = (0.6, 0.8, 0.29, 0.6)                       # rendement global par TechMac (tableau 312)
 ALPHA = (6.0, 0.0, 0.0, 6.0)                     # coefficient d'inertie (tableau 314)
 SPECTRE = ((1.0, 0.0), (0.75, 0.1), (0.5, 0.1), (0.25, 0.3), (0.0, 0.5))   # (X, S), identique à la montée et à la descente (tableau 318)

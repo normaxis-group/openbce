@@ -14,6 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from openbce import aeraulique, calendrier, climat, enveloppe, groupe, meteo, rsee, scenarios
+from openbce import usages as mod_usages
 
 METEO = Path(__file__).resolve().parent.parent / "donnees" / "meteo_re2020.npz"
 
@@ -33,7 +34,7 @@ def comparer(chemin: str) -> list[tuple]:
         sorties = {z.entier("Index"): z for sb in projet.sortie.tous("Sortie_Batiment_B") if sb.entier("Index") == bat.entier("Index") for z in sb.tous("Sortie_Zone_B")}
         for zone in bat.directs("Zone"):
             usage, sortie = zone.entier("Usage"), sorties.get(zone.entier("Index"))
-            if usage not in (1, 2, 3) or sortie is None:
+            if usage not in mod_usages.NOMS or sortie is None:
                 continue
             groupes = zone.directs("Groupe")
             cle = "SHAB" if usage in (1, 2) else "SU"

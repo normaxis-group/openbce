@@ -70,6 +70,17 @@ class Scenario:
     # la relance les lit, car les consignes réduites courte et prolongée peuvent avoir la même valeur (froid : 30 °C)
     etat_ch: np.ndarray | None = None
     etat_fr: np.ndarray | None = None
+    nbh_occ_ref: float = 0.0      # heures d'occupation de la semaine type, somme de la matrice hebdomadaire (équation 66)
+
+
+def _etat(x: np.ndarray) -> np.ndarray:
+    """Indicateur de consigne ramené à 1, 0 ou -1. Le tableur porte 0,5 pour la dernière semaine de décembre des usages 23
+    et 24 (occupation à moitié) : le texte ne connaît que trois états (p. 557), une semaine à demi occupée est lue en confort."""
+    return np.where(x > 0, 1.0, np.where(x < 0, -1.0, 0.0))
+
+
+def _nbh_occ_ref(usage: int) -> float:
+    return float(np.asarray(_tableau(usage, "occupation")["hebdo"], dtype=float).sum())
 
 
 def _consignes(usage: int, etat: np.ndarray, cle: str) -> np.ndarray:
@@ -85,8 +96,8 @@ def habitation(cal: Calendrier, usage: int, surface: float, nb_logements: int) -
         return h * a
 
     # consignes : tableau 5, le résultat est le plus petit des deux états (-1 l'emporte, puis 0)
-    ch = np.minimum(*_horaire(cal, _tableau(usage, "chauffage")))
-    fr = np.minimum(*_horaire(cal, _tableau(usage, "refroidissement")))
+    ch = _etat(np.minimum(*_horaire(cal, _tableau(usage, "chauffage"))))
+    fr = _etat(np.minimum(*_horaire(cal, _tableau(usage, "refroidissement"))))
     occupation = produit("occupation")
     nadeq = adultes_equivalents(usage, surface, nb_logements)
     occupants = nadeq * occupation * produit("occupant")
@@ -95,7 +106,11 @@ def habitation(cal: Calendrier, usage: int, surface: float, nb_logements: int) -
         ventilation=produit("ventilation"), eclairage=produit("éclairage"), occupants=occupants,
         apports_occupants=occupants * _scalaire(usage, "chaleur moyenne")["valeur"],
         apports_usages=surface * _scalaire(usage, "apports de chaleur hors occupants")["valeur"] * produit("apports de chaleur"), nadeq=nadeq,
-        etat_ch=ch, etat_fr=fr)
+        etat_ch=ch, etat_fr=fr, nbh_occ_ref=_nbh_occ_ref(usage))
+
+
+# Cellules vides du tableur du 29/04/2026, lues 0 ; la synthèse de l'annexe III (p. 24 et 25) donne la valeur, W par m² de local.
+APPORTS_TEXTE = {(11, "Salle petits déjeuners"): 44.3, (12, "Salle de réunion"): 10.0}
 
 
 def _locaux(usage: int) -> list[dict]:
@@ -112,10 +127,13 @@ def _locaux(usage: int) -> list[dict]:
             locaux[-1]["ratio"] = s["valeur"]
         elif s["nom"] == "occupants par m²":
             locaux[-1]["occupants"] = s["valeur"]
-        elif s.get("unite") in ("W/Nocc", "W/Nadeq"):
+        elif s.get("unite") in ("W/Nocc", "W/Nadeq", "W/Noccnom"):  # le tableur écrit W/Noccnom pour les usages 4 à 28
             locaux[-1]["w_occupant"] = s["valeur"]
         elif s.get("unite") == "Watts/unité":
             locaux[-1]["w_usages"] = s["valeur"]
+    for l in locaux:
+        if not l["w_usages"] and (usage, l["nom"]) in APPORTS_TEXTE:
+            l["w_usages"] = APPORTS_TEXTE[(usage, l["nom"])]
     occupation = [t for t in donnees["tableaux"] if t["hebdo"] and t["nom"].lower().startswith("occupant")]
     apports = [t for t in donnees["tableaux"] if t["hebdo"] and t["nom"].lower().startswith("apports de chaleur")]
     for k, l in enumerate(locaux):
@@ -129,8 +147,8 @@ def tertiaire(cal: Calendrier, usage: int, surface: float) -> Scenario:
         h, a = _horaire(cal, _tableau(usage, nom))
         return h * a
 
-    ch = np.minimum(*_horaire(cal, _tableau(usage, "chauffage")))
-    fr = np.minimum(*_horaire(cal, _tableau(usage, "refroidissement")))
+    ch = _etat(np.minimum(*_horaire(cal, _tableau(usage, "chauffage"))))
+    fr = _etat(np.minimum(*_horaire(cal, _tableau(usage, "refroidissement"))))
     occupation = produit("occupation")
     occupants = np.zeros(len(occupation))
     w_occupants = np.zeros(len(occupation))
@@ -147,4 +165,4 @@ def tertiaire(cal: Calendrier, usage: int, surface: float) -> Scenario:
     return Scenario(
         occupation=occupation, consigne_ch=_consignes(usage, ch, "chauffage"), consigne_fr=_consignes(usage, fr, "refroidissement"),
         ventilation=produit("ventilation"), eclairage=produit("éclairage"), occupants=occupants, apports_occupants=w_occupants,
-        apports_usages=w_usages, nadeq=0.0, locaux=tuple((l["nom"], l["ratio"]) for l in locaux), etat_ch=ch, etat_fr=fr)
+        apports_usages=w_usages, nadeq=0.0, locaux=tuple((l["nom"], l["ratio"]) for l in locaux), etat_ch=ch, etat_fr=fr, nbh_occ_ref=_nbh_occ_ref(usage))

@@ -15,6 +15,7 @@ import numpy as np
 from banc import cep as banc_cep, cep_total, confort
 from banc.besoins import METEO, zone_climatique
 from openbce import aeraulique, calendrier, climat, enveloppe, exigences, groupe, meteo, rsee, scenarios, sortie_rsee
+from openbce import usages as mod_usages
 
 
 def calculer(chemin: str) -> dict:
@@ -41,13 +42,14 @@ def calculer(chemin: str) -> dict:
         poids[cle] = dict(ch=float(np.sum(d["mois"])) * s, fr=float(np.sum(d["fr_mois"])) * s, ecs=(ecs_tot or 0.0) * s, s=s)
     somme = {k: sum(p[k] for p in poids.values()) or 1.0 for k in ("ch", "fr", "ecs")}
     gaz_ch = max(total.get("gaz", 0.0) * total["sref"] - (total["postes"].get("ecs_gaz", 0.0)), 0.0)
-    batiments = []
+    batiments, zones_ignorees = [], []
     for bat in projet.entree.directs("Batiment"):
         b_tampons = enveloppe.coefficients_b(bat)
         zones = []
         for zone in bat.directs("Zone"):
             usage = zone.entier("Usage")
-            if usage not in (1, 2, 3):
+            if usage not in mod_usages.NOMS:
+                zones_ignorees.append(dict(batiment=bat.texte("Name"), zone=zone.texte("Name"), usage=usage, motif="usage non pris en charge par le moteur"))
                 continue
             groupes = zone.directs("Groupe")
             cle_s = "SHAB" if usage in (1, 2) else "SU"
@@ -73,7 +75,7 @@ def calculer(chemin: str) -> dict:
                 cef_energie = {("ch", "elec"): cef["ch"] - gaz_ch_g, ("ch", "gaz"): gaz_ch_g, ("fr", "elec"): cef["fr"],
                                ("ecs", "elec"): cef["ecs"] - gaz_ecs_g, ("ecs", "gaz"): gaz_ecs_g}
                 b_dh, nb = dh.get((zone.texte("Name"), g.texte("Name")), (None, None))
-                gs.append(dict(index=g.entier("Index"), name=g.texte("Name"), sref=s, shab=s if usage in (1, 2) else 0.0, su=s if usage == 3 else 0.0,
+                gs.append(dict(index=g.entier("Index"), name=g.texte("Name"), sref=s, shab=s if usage in (1, 2) else 0.0, su=s if usage >= 3 else 0.0,
                                climatise=g.entier("Is_Climatise", 0) == 1, b_ch_mois=mois(b.chauffage), b_fr_mois=mois(b.refroidissement), b_ecl_mois=mois(b.eclairage),
                                c_b_ch_mois=list(d["mois"]) if d is not None else [0.0] * 12, c_b_fr_mois=list(d["fr_mois"]) if d is not None else [0.0] * 12,
                                c_b_ecs=ecs_tot or 0.0, cef=cef, cef_energie=cef_energie, dh=b_dh, nb_h_inconf=nb,
@@ -88,7 +90,7 @@ def calculer(chemin: str) -> dict:
         batiments.append(dict(index=bat.entier("Index"), name=bat.texte("Name"), zones=zones,
                               cep=dict(cef_annuel=sum(imp.values()), cep_annuel=total["cep"], imp=imp,
                                        par_energie=dict(elec=sum(imp.values()) - total.get("gaz", 0.0), gaz=total.get("gaz", 0.0)))))
-    return dict(name=Path(chemin).stem, batiments=batiments, version=projet.version_moteur, departement=simu.texte("Departement"), altitude=simu.nombre("Altitude"))
+    return dict(name=Path(chemin).stem, batiments=batiments, zones_ignorees=zones_ignorees, version=projet.version_moteur, departement=simu.texte("Departement"), altitude=simu.nombre("Altitude"))
 
 
 CHAMPS_COMPARES = (("Sortie_Batiment_B", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_B_Ecl_annuel", "O_Bbio_pts_annuel")),

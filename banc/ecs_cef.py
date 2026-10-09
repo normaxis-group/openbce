@@ -21,6 +21,7 @@ import numpy as np
 from banc.besoins import METEO, zone_climatique
 from banc.cep import saisons_batiment
 from openbce import calendrier, climat, ecs, ecs_distribution, enveloppe, generateurs_ballon, meteo, rsee
+from openbce import usages as mod_usages
 
 
 class _Defaut(dict):
@@ -66,7 +67,7 @@ def comparer(chemin: str, rapide: bool = False):
             seule = np.ones(n, dtype=bool) if ch is None else ~(ch[jours] | fr[jours])
         for zone in bat.directs("Zone"):
             usage = zone.entier("Usage")
-            if usage not in (1, 2, 3):
+            if usage not in mod_usages.NOMS:
                 continue
             for g in zone.directs("Groupe"):
                 surface = g.nombre("SHAB" if usage in (1, 2) else "SU")

@@ -75,9 +75,10 @@ Ces écarts sont détaillés dans le tableau ci-dessous et dans les commentaires
 | Besoin de froid (saisons, ouverture des baies) | fait | 159 zones, écart médian +0,1 kWh/m², écart absolu médian 0,2 |
 | Bbio du logement | fait | 167 zones : écart médian +0,1 %, 160 dans ±5 % (mesure du 08/10/2026, voir le résumé) |
 | Stores enroulables | fait | essai sur 4 projets, Bbio entre -4,3 % et +3,9 % |
-| Stores vénitiens, espaces tampons vitrés, tertiaire | à faire | - |
+| Stores vénitiens, espaces tampons vitrés | à faire | - |
+| Usages 4 à 28 (enseignement, hôtels, restauration, commerces, santé, industrie, sport...) | codé, non validé | tables de l'annexe III lues et contre-lues (`specs/usages/`) : débits conventionnels (tableau 56-1), éclairage par local (tableau 78), ECS (tableau 277), ouverture des baies (tableau 43), exigences (annexe R. 172-4) ; aucun récapitulatif de référence, le résumé porte un avertissement |
 | Confort d'été (DH, mode Th-DC) | en cours | `groupe.calculer(thd=...)`, `banc.confort` : 12 groupes de 8 projets, écart médian nul, écart absolu médian 77 °C.h, 8 dans ±10 % |
-| Bbio_max, DH_max (annexe R. 172-4) | fait | `exigences.py`, `banc.exigences` : Mbgeo juste sur 732 groupes, DH_max juste sur 761 |
+| Bbio_max, DH_max (annexe R. 172-4) | fait | `exigences.py`, `banc.exigences` : Mbgeo juste sur 732 groupes, DH_max juste sur 761 (usages 1 à 3) ; tables des 28 usages, Cep,nr_max et Cep_max non confrontés |
 | Consommations (Cep) | en cours | voir ci-dessous ; spécifications du lot 2 dans `specs/` |
 | Carbone | à faire | - |
 

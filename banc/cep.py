@@ -17,6 +17,7 @@ from banc.besoins import METEO, zone_climatique
 import numpy as np
 
 from openbce import aeraulique, brasseurs, calendrier, climat, consommation, distribution, ecs, ecs_distribution, emission, enveloppe, groupe, meteo, rsee, scenarios, ventilation
+from openbce import usages as mod_usages
 
 
 def reseaux_chaud(g, b_tampons=None):
@@ -46,7 +47,7 @@ def saisons_batiment(bat, cl, cal, b_tampons=None):
     union_ch, union_fr = None, None
     for zone in bat.directs("Zone"):
         usage = zone.entier("Usage")
-        if usage not in (1, 2, 3):
+        if usage not in mod_usages.NOMS:
             continue
         groupes = zone.directs("Groupe")
         cle = "SHAB" if usage in (1, 2) else "SU"
@@ -85,7 +86,7 @@ def comparer(chemin: str):
         union_ch, union_fr = saisons_batiment(bat, cl, cal, b_tampons)
         for zone in bat.directs("Zone"):
             usage = zone.entier("Usage")
-            if usage not in (1, 2, 3):
+            if usage not in mod_usages.NOMS:
                 continue
             groupes = zone.directs("Groupe")
             cle = "SHAB" if usage in (1, 2) else "SU"

@@ -24,8 +24,15 @@ from .scenarios import ALPHA_CONV, Scenario
 EPSILON_BBIO = 0.5        # efficacité de l'échangeur de la ventilation conventionnelle du Bbio (6.1.3)
 CPA_VOL = 0.34            # chaleur volumique de l'air, Wh/(m³.K)
 P_CONV = 0.5              # part convective de l'émetteur conventionnel du Bbio (8.1.3)
-DEBIT_CONVENTIONNEL = {3: 4.0}     # m³/h par m² de surface de référence, en occupation : bureaux (399)
-DEBIT_INOCCUPATION = {3: (60.0, 0.42)}   # en inoccupation : max(60 m³/h ; 0,42 m³/h par m²) (405, 408)
+# Fiche 6.2, tableau 56-1 (annexe III 2026, p. 334 et 335) : débits conventionnels du Bbio des usages non résidentiels,
+# m³/h par m² de SREF (= SU). Occupation : q = Param x SREF (399, 402) ; inoccupation : q = max(60 ; Param x SREF) (405, 408).
+# Bureaux validés au banc ; usages 4 à 28 lus dans le texte, sans récapitulatif de référence (usages.VALIDES).
+DEBIT_CONVENTIONNEL = {3: 4.0, 4: 7.2, 5: 4.7, 6: 5.6, 7: 7.4, 8: 3.0, 9: 2.0, 10: 8.0, 11: 7.0, 12: 4.7, 13: 10.0, 14: 10.0, 15: 10.0,
+                       16: 10.0, 17: 3.7, 18: 6.7, 19: 4.5, 20: 4.5, 21: 4.5, 22: 4.0, 23: 3.1, 24: 3.1, 25: 3.0, 26: 8.0, 27: 8.0, 28: 3.0}
+_PARAM_INOCCUPATION = {3: 0.42, 4: 0.38, 5: 0.38, 6: 0.46, 7: 0.6, 8: 3.0, 9: 2.2, 10: 0.0, 11: 0.0, 12: 0.75, 13: 0.5, 14: 0.5, 15: 0.5,
+                       16: 0.5, 17: 0.0, 18: 6.7, 19: 4.5, 20: 4.5, 21: 0.0, 22: 0.3, 23: 0.0, 24: 0.0, 25: 0.0, 26: 0.3, 27: 0.3, 28: 0.0}
+DEBIT_INOCCUPATION = {u: (60.0, v) for u, v in _PARAM_INOCCUPATION.items()}   # (plancher m³/h par groupe, m³/h par m²) ; usage 9 : 2,2 > 2,0, tel quel
+NUIT_INCONFORT_CONSIGNE = (1, 2, 19)   # fiche 13.5, équation 2544 (p. 1401) : température d'inconfort chaud = consigne hors 6 h-22 h
 PAS_T = 3.0
 T_INTERIEURES = tuple(13.0 + PAS_T * k for k in range(8))     # 13 à 34 °C
 FACTEUR_INFILTRATION = 1.0   # sert aux essais de sensibilité du banc
@@ -111,7 +118,7 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
     g = thermique.Groupe(surface, sum(b.surface for _, b in lot), inertie.nombre("Amq_surf"), inertie.nombre("Cmq_surf"))
     opaques = parois.du_groupe(groupe, climat, b_tampons)
     opaques_e = parois.du_groupe(groupe, climat, b_tampons, ete=True) if thd else opaques
-    locaux_ecl = None if usage in (1, 2) else (eclairage.locaux_tertiaires_saisis(groupe) if thc else eclairage.locaux_tertiaires(groupe))
+    locaux_ecl = None if usage in (1, 2) else (eclairage.locaux_tertiaires_saisis(groupe, usage) if thc else eclairage.locaux_tertiaires(groupe, usage))
     hgem, n = thermique.hgemq(g, opaques.h), len(climat.te)
 
     # baies : flux pour la protection relevée et baissée, puis interpolation par Rprot à chaque heure
@@ -160,7 +167,9 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
     recup_prec = 0.0
     mq, top_fin, ti_fin, top_max_jour, top_max_veille = 18.0, 18.0, 18.0, 0.0, 0.0
     hebdo = sc.occupation[:168]                                       # première semaine : semaine type d'occupation (66)
-    automate = saisons.Saisons(float(hebdo.sum()), surface, saisons.POIDS_INCONFORT_CHAUD_THC if thc else None)
+    # Nbh_occ_ref (66) : somme de la matrice hebdomadaire d'occupation ; la première semaine simulée est nulle pour les usages
+    # fermés en semaine 1 (4, 5, 18, 25 à 28) et vaut la semaine type pour les autres
+    automate = saisons.Saisons(sc.nbh_occ_ref or float(hebdo.sum()), surface, saisons.POIDS_INCONFORT_CHAUD_THC if thc else None)
     jours_saison = np.zeros(n // 24 + 1, dtype=int)
     for h in range(n):
         jour = h // 24
@@ -184,7 +193,7 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
             consigne_fr = float(sc.consigne_fr.min())
             heure_legale = int(cal.case[h]) - 1                       # heure légale de 0 à 23 (case 10 = 9 h, voir saisons)
             inc_max = max(consigne_fr, 0.33 * climat.theta_rm[h] + 18.8 + saisons.D_OP_INC_C1)                  # (2544)
-            if usage in (1, 2) and not 6 < heure_legale <= 22:
+            if usage in NUIT_INCONFORT_CONSIGNE and not 6 < heure_legale <= 22:
                 conf = consigne_fr                                                                               # (2545) nuit
             else:
                 conf = min(consigne_fr + D_OP_MIN_MAX, inc_max)                                                  # (2545), (2546)

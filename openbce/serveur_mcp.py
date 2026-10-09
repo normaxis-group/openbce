@@ -159,6 +159,10 @@ def _calculer(entree: Path, sortie: Path) -> dict:
     return resume
 
 
+def _reserves(resume: dict) -> str:
+    return RESERVES + (" " + resume["avertissement"] if resume.get("avertissement") else "")
+
+
 def _sortie_temporaire(entree: Path, suffixe: str) -> Path:
     return Path(tempfile.mkdtemp(prefix="openbce_mcp_")) / f"{entree.stem}_{suffixe}.xml"
 
@@ -169,7 +173,7 @@ def outil_calculer(arguments: dict) -> dict:
     if sortie.resolve() == entree.resolve():
         raise ErreurOutil("la sortie ne peut pas remplacer le RSEE d'entrée")
     resume = _calculer(entree, sortie)
-    return dict(resume, rsee_recalcule=str(sortie), reserves=RESERVES)
+    return dict(resume, rsee_recalcule=str(sortie), reserves=_reserves(resume))
 
 
 def outil_comparer(arguments: dict) -> dict:
@@ -179,7 +183,7 @@ def outil_comparer(arguments: dict) -> dict:
     from banc import sortie_rsee as pilote
     lignes = [{k: (None if isinstance(v, float) and v != v else v) for k, v in e.items()}       # NaN : champ absent
               for e in pilote.ecarts(rsee.lire(entree), rsee.lire(sortie))]
-    return dict(resume=resume, comparaison=lignes, rsee_recalcule=str(sortie), reserves=RESERVES)
+    return dict(resume=resume, comparaison=lignes, rsee_recalcule=str(sortie), reserves=_reserves(resume))
 
 
 def _pas(texte: str) -> tuple[str, int | None]:

@@ -4,28 +4,121 @@
   "title": "Résumé d'un calcul OpenBCE",
   "description": "Résultats par bâtiment d'un RSEE recalculé par OpenBCE. Rendu par l'API HTTP (POST /calcul?format=json, ou en-tête X-Openbce-Resume) et par l'outil MCP calculer. Résultats non opposables.",
   "type": "object",
-  "required": ["moteur", "version", "batiments"],
+  "required": [
+    "moteur",
+    "version",
+    "batiments"
+  ],
   "properties": {
-    "moteur": {"type": "string", "const": "openbce"},
-    "version": {"type": "string", "description": "version du moteur OpenBCE"},
+    "moteur": {
+      "type": "string",
+      "const": "openbce"
+    },
+    "version": {
+      "type": "string",
+      "description": "version du moteur OpenBCE"
+    },
     "batiments": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["batiment", "sref", "bbio_pts", "cep", "cef", "dh_max_groupes", "bbio_max"],
+        "required": [
+          "batiment",
+          "sref",
+          "bbio_pts",
+          "cep",
+          "cef",
+          "dh_max_groupes",
+          "bbio_max"
+        ],
         "properties": {
-          "batiment": {"type": "string", "description": "nom du bâtiment dans le RSEE"},
-          "sref": {"type": "number", "description": "surface de référence du bâtiment, m² (SHAB en logement, SU ailleurs)"},
-          "bbio_pts": {"type": "number", "description": "Bbio du bâtiment, points : 2 x (besoin de chauffage + besoin de froid) + 5 x besoin d'éclairage, pondérés par les surfaces"},
-          "cep": {"type": "number", "description": "consommation d'énergie primaire, kWh/(m².an)"},
-          "cef": {"type": "number", "description": "consommation d'énergie finale, kWh/(m².an)"},
-          "dh_max_groupes": {"type": "number", "description": "degrés-heures d'inconfort estival du groupe le plus défavorable, °C.h"},
-          "bbio_max": {"type": "array", "items": {"type": "number"}, "description": "Bbio_max de chaque zone du bâtiment, points"}
+          "batiment": {
+            "type": "string",
+            "description": "nom du bâtiment dans le RSEE"
+          },
+          "sref": {
+            "type": "number",
+            "description": "surface de référence du bâtiment, m² (SHAB en logement, SU ailleurs)"
+          },
+          "bbio_pts": {
+            "type": "number",
+            "description": "Bbio du bâtiment, points : 2 x (besoin de chauffage + besoin de froid) + 5 x besoin d'éclairage, pondérés par les surfaces"
+          },
+          "cep": {
+            "type": "number",
+            "description": "consommation d'énergie primaire, kWh/(m².an)"
+          },
+          "cef": {
+            "type": "number",
+            "description": "consommation d'énergie finale, kWh/(m².an)"
+          },
+          "dh_max_groupes": {
+            "type": "number",
+            "description": "degrés-heures d'inconfort estival du groupe le plus défavorable, °C.h"
+          },
+          "bbio_max": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "description": "Bbio_max de chaque zone du bâtiment, points"
+          }
         }
       }
     },
-    "duree_s": {"type": "number", "description": "durée du calcul en secondes (outils MCP seulement)"},
-    "rsee_recalcule": {"type": "string", "description": "chemin du RSEE recalculé écrit sur disque (outils MCP seulement)"},
-    "reserves": {"type": "string", "description": "rappel des réserves d'usage (outils MCP seulement)"}
+    "duree_s": {
+      "type": "number",
+      "description": "durée du calcul en secondes (outils MCP seulement)"
+    },
+    "rsee_recalcule": {
+      "type": "string",
+      "description": "chemin du RSEE recalculé écrit sur disque (outils MCP seulement)"
+    },
+    "reserves": {
+      "type": "string",
+      "description": "rappel des réserves d'usage (outils MCP seulement)"
+    },
+    "usages": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "Usages (1 à 28) des zones calculées."
+    },
+    "usages_non_valides": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "description": "Usages présents sans validation au banc (tous sauf 1, 2 et 3)."
+    },
+    "zones_ignorees": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "batiment": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "usage": {
+            "type": "integer"
+          },
+          "motif": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Zones non calculées et pourquoi."
+    },
+    "avertissement": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Phrase d'avertissement quand le calcul contient un usage non validé."
+    }
   }
 }

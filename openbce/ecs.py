@@ -20,10 +20,13 @@ RHO_CW = 1.163          # ρw.cw, Wh/(L.K) (tableau 277)
 THETA_UW = 40.0         # température de l'eau mitigée au puisage, °C
 A_MAX = 392.0           # litres à 40 °C par semaine et par adulte équivalent (1687, 1691)
 A_SURFACE = 40.0        # litres à 40 °C par semaine et par m² (1687, 1691)
-A_TERTIAIRE = {3: 1.25} # litres par semaine et par m² de surface utile (tableau 278)
+# Tableau 277 (annexe III 2026, p. 1053 à 1055) : litres d'eau à 40 °C par semaine et par m² de surface utile (Nu = m² de SU
+# pour les 26 usages). Usage 16 : 19,5 au texte (deux occurrences), 4,7 dans le tableur du 29/04/2026 ; le texte est retenu.
+A_TERTIAIRE = {3: 1.25, 4: 0.2, 5: 0.2, 6: 0.2, 7: 0.2, 8: 22.873, 9: 18.98, 10: 5.694, 11: 4.76, 12: 0.714, 13: 19.5, 14: 2.2, 15: 5.3,
+               16: 19.5, 17: 0.24, 18: 79.0, 19: 2.8, 20: 1.68, 21: 25.2, 22: 0.24, 23: 0.24, 24: 0.24, 25: 13.2, 26: 4.5, 27: 9.8, 28: 33.9}
 
 GAIN_EMETTEUR = (0.0, 0.05, 0.07)                 # mélangeurs, mitigeurs thermostatiques, temporisateurs (tableau 274)
-RAT_DOUCHES_BAINS = {1: 0.8, 2: 0.8, 3: 0.5}      # tableau 275
+RAT_DOUCHES_BAINS = {1: 0.8, 2: 0.8, 3: 0.5, **{u: 0.0 for u in range(4, 29)}}      # tableau 274 (p. 1047) : « autres usages 0 % »
 # Tableau 276, rangé selon le code app_ecs des RSEE. L'ordre des codes n'est pas donné par le texte : il est déduit du
 # banc (voir banc/ecs.py).
 GAIN_APPAREIL = {0: 0.05, 1: 0.025, 2: 0.0, 3: -0.025}

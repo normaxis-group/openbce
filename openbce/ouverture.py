@@ -21,6 +21,9 @@ CW, CST = 0.001, 0.0035                                    # vent, tirage thermi
 CD_GO, D_CP, VENT_MAX = 0.6, 0.75, 3.0
 RHO_REF, THETA_REF = 1.2, 19.0
 CVENT = 0.9
+# Tableau 43 (fiche 5.13, p. 265 et 266) : caractère traversant conventionnel au sens de la surventilation ; usage 2 saisi
+# sur le groupe (Delta_trav_surv), les autres usages valent 0.
+TRAVERSANT_SURV = {1: 1, 17: 1, 18: 1, 22: 1, 23: 1, 24: 1, 25: 1, 28: 1}
 # taux de passage de l'air à travers une protection mobile baissée, selon sa typologie (tableau 40)
 TAUX_PASSAGE = {0: 0.0, 1: 0.10, 2: 0.25, 3: 0.50, 4: 0.75}
 
@@ -101,6 +104,6 @@ def du_groupe(groupe, usage: int) -> Ouvrants:
     ouvrables = [(k, b) for k, b in enumerate(groupe.directs("Baie")) if b.entier("Baie_ouvrable", 0) == 1 and b.entier("Id_Et", 0) == 0]
     baies = tuple((b.nombre("Ab") * b.nombre("Rouv_Max", 0.0), b.nombre("Alpha"), b.nombre("Beta"), b.entier("Exp_BR", 1)) for _, b in ouvrables)
     passage = tuple(1.0 if b.entier("Choix_PM_GPM", 0) == 0 else TAUX_PASSAGE.get(b.entier("Typo_Permea_PM", 0), 0.0) for _, b in ouvrables)
-    traversant = usage == 1 or groupe.entier("Delta_trav_surv", 0) == 1      # tableau 43
+    traversant = TRAVERSANT_SURV.get(usage, 0) == 1 or (usage == 2 and groupe.entier("Delta_trav_surv", 0) == 1)   # tableau 43
     return Ouvrants(baies, traversant, groupe.nombre("Httf", 1.5) or 1.5, tuple(k for k, _ in ouvrables), passage,
                     tuple(b.entier("Has_Gestion_Auto_Ouverture", 0) == 1 for _, b in ouvrables))
