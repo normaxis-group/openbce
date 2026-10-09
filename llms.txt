@@ -1,0 +1,32 @@
+# OpenBCE
+
+> Moteur de calcul libre (AGPL-3.0, droits ARKEMEP) de la méthode Th-BCE 2020 de la réglementation environnementale
+> française RE2020, écrit depuis le texte publié de l'annexe III de l'arrêté du 4 août 2021 modifié. Il lit un RSEE
+> (fichier XML d'une étude RE2020), recalcule Bbio, Cep et DH, et documente chaque lecture du texte. Logiciel non
+> évalué : ses résultats ne sont pas opposables et ne valent ni attestation ni étude réglementaire. Python et numpy.
+
+Le code suit l'ordre et la numérotation des fiches de l'annexe III ; les numéros d'équation et de tableau sont en
+commentaire. Les points où le texte ne suffit pas, ou où les logiciels évalués s'en écartent, sont recensés dans
+docs/lectures.md. Le projet est rédigé en français.
+
+## Documentation
+
+- [README](README.md): présentation, avertissement, installation, organisation du code
+- [Méthode](docs/methode.md): la méthode Th-BCE 2020 (modes Th-B, Th-C, Th-D) et la correspondance fiche par fiche avec les modules
+- [Lectures du texte](docs/lectures.md): registre des lectures tranchées, dont les écarts entre le texte et la référence
+- [Validation](docs/validation.md): réserves, protocole, résultats sur 50 opérations, écarts connus
+- [Sources](docs/sources.md): textes réglementaires, annexes I à XII, données conventionnelles, données ouvertes, avec liens
+- [RSEE](docs/rsee.md): structure du format, versions du moteur de référence, ce qu'OpenBCE lit et écrit
+
+## Emploi par un assistant
+
+- [IA](docs/ia.md): serveur MCP (outils version, lire_rsee, calculer, comparer, variante), installation, consignes
+- [OpenAPI](docs/openapi.yaml): API HTTP (GET /version, POST /calcul)
+- [Schéma des résultats](docs/schemas/resume.schema.json): JSON Schema du résumé par bâtiment
+
+## Optionnel
+
+- [Pistes de recherche](docs/recherche.md): sujets d'étude pour la recherche et l'enseignement
+- [Contribuer](CONTRIBUTING.md): signaler une lecture du texte, proposer du code
+- [Citation](CITATION.cff): comment citer OpenBCE
+- [Spécifications](specs/): spécifications des fiches des consommations

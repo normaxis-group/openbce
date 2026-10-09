@@ -1,0 +1,78 @@
+openapi: 3.1.0
+info:
+  title: OpenBCE, API HTTP
+  version: 0.1.0
+  summary: Recalcul d'un RSEE (RE2020) par OpenBCE, moteur libre de la méthode Th-BCE 2020.
+  description: |
+    Service lancé par `python -m openbce.api --port 8765` (bibliothèque standard, sans authentification : à exposer
+    seulement sur un réseau de confiance ou derrière un mandataire). Le calcul est synchrone ; il dure de quelques
+    dizaines de secondes à quelques dizaines de minutes selon le projet. Le RSEE reçu est écrit dans un dossier
+    temporaire le temps du calcul puis effacé. Les résultats ne sont pas opposables.
+  license:
+    name: AGPL-3.0-or-later
+    identifier: AGPL-3.0-or-later
+servers:
+  - url: http://localhost:8765
+paths:
+  /version:
+    get:
+      operationId: version
+      summary: Version du moteur et texte suivi
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [moteur, version, corpus]
+                properties:
+                  moteur: {type: string, const: openbce}
+                  version: {type: string}
+                  corpus: {type: string, description: texte réglementaire suivi}
+  /calcul:
+    post:
+      operationId: calculer
+      summary: Recalcule un RSEE
+      description: |
+        Corps : le RSEE d'entrée (XML). Par défaut, la réponse est le RSEE recalculé (bloc Sortie_Projet remplacé),
+        avec le résumé JSON dans l'en-tête `X-Openbce-Resume`. Avec `format=json`, la réponse est le résumé seul.
+      parameters:
+        - name: format
+          in: query
+          required: false
+          schema: {type: string, enum: [json]}
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema: {type: string, description: RSEE d'entrée}
+      responses:
+        "200":
+          description: RSEE recalculé, ou résumé si format=json
+          headers:
+            X-Openbce-Resume:
+              description: résumé JSON par bâtiment (voir schemas/resume.schema.json), absent avec format=json
+              schema: {type: string}
+          content:
+            application/xml:
+              schema: {type: string}
+            application/json:
+              schema: {$ref: "./schemas/resume.schema.json"}
+        "400":
+          description: XML invalide
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Erreur"}
+        "422":
+          description: erreur de calcul (cas non couvert par le moteur, donnée manquante...), jamais masquée
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Erreur"}
+components:
+  schemas:
+    Erreur:
+      type: object
+      required: [erreur]
+      properties:
+        erreur: {type: string}

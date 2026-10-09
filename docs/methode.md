@@ -61,6 +61,7 @@ numéros d'équation et de tableau qu'il applique.
 | 11.1 | pertes récupérables | `groupe.py` | fait pour les réseaux |
 | 12.1 à 12.4 | photovoltaïque | | à faire |
 | 13.2 à 13.4, 4.7 | sorties Th-C, bilans, Cep | `bilans.py`, `consommation.py` | fait |
+| - | API HTTP, serveur MCP pour les assistants d'IA | `api.py`, `serveur_mcp.py` | fait (voir [ia.md](ia.md)) |
 | 13.5 | confort d'été (Th-D) | `groupe.py` | fait, à fiabiliser |
 | 16.x | systèmes sous Titre V | | à faire |
 | annexe R. 172-4 | Bbio_max, DH_max et modulations | `exigences.py` | fait |

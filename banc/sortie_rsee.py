@@ -91,18 +91,28 @@ def calculer(chemin: str) -> dict:
     return dict(name=Path(chemin).stem, batiments=batiments, version=projet.version_moteur, departement=simu.texte("Departement"), altitude=simu.nombre("Altitude"))
 
 
-def comparer(ref: rsee.Projet, calc: rsee.Projet) -> list[str]:
+CHAMPS_COMPARES = (("Sortie_Batiment_B", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_B_Ecl_annuel", "O_Bbio_pts_annuel")),
+                   ("Sortie_Zone_B", ("O_Bbio_Max",)),
+                   ("Sortie_Batiment_C", ("O_Cef_annuel", "O_Cep_annuel", "O_Cef_imp_ch_annuel", "O_Cef_imp_fr_annuel", "O_Cef_imp_ecs_annuel", "O_Cef_imp_ecl_annuel", "O_Cef_imp_auxvent_annuel")),
+                   ("Sortie_Groupe_C", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_Cef_ch_annuel", "O_Cef_ecs_annuel")),
+                   ("Sortie_Groupe_D", ("O_NbDegresHeures", "O_NbDegresHeures_max")))
+
+
+def ecarts(ref: rsee.Projet, calc: rsee.Projet) -> list[dict]:
+    """Écarts champ par champ entre les sorties de référence et celles d'OpenBCE (écart relatif None si référence nulle)."""
     lignes = []
-    for bloc, champs in (("Sortie_Batiment_B", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_B_Ecl_annuel", "O_Bbio_pts_annuel")),
-                         ("Sortie_Zone_B", ("O_Bbio_Max",)),
-                         ("Sortie_Batiment_C", ("O_Cef_annuel", "O_Cep_annuel", "O_Cef_imp_ch_annuel", "O_Cef_imp_fr_annuel", "O_Cef_imp_ecs_annuel", "O_Cef_imp_ecl_annuel", "O_Cef_imp_auxvent_annuel")),
-                         ("Sortie_Groupe_C", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_Cef_ch_annuel", "O_Cef_ecs_annuel")),
-                         ("Sortie_Groupe_D", ("O_NbDegresHeures", "O_NbDegresHeures_max"))):
+    for bloc, champs in CHAMPS_COMPARES:
         for r, c in zip(ref.sortie.tous(bloc), calc.sortie.tous(bloc)):
             for ch in champs:
                 a, b = r.nombre(ch, float("nan")), c.nombre(ch, float("nan"))
-                lignes.append(f"{bloc:18s} {r.texte('Name')[:24]:24s} {ch:28s} calc {b:8.1f}  ref {a:8.1f}  {(b / a - 1 if a else 0):+.1%}")
+                lignes.append(dict(bloc=bloc, nom=r.texte("Name"), champ=ch, openbce=b, reference=a,
+                                   ecart=round(b / a - 1, 4) if a and a == a and b == b else None))
     return lignes
+
+
+def comparer(ref: rsee.Projet, calc: rsee.Projet) -> list[str]:
+    return [f"{e['bloc']:18s} {e['nom'][:24]:24s} {e['champ']:28s} calc {e['openbce']:8.1f}  ref {e['reference']:8.1f}  {(e['ecart'] or 0):+.1%}"
+            for e in ecarts(ref, calc)]
 
 
 if __name__ == "__main__":

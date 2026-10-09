@@ -56,6 +56,7 @@ Résultats de validation au 08/10/2026, sur 50 opérations réelles : Cep à -0,
 | [docs/sources.md](docs/sources.md) | textes réglementaires, annexes, données conventionnelles et données ouvertes, avec leurs liens |
 | [docs/rsee.md](docs/rsee.md) | le format RSEE, ses versions, ce qu'OpenBCE en lit et en écrit |
 | [docs/recherche.md](docs/recherche.md) | pistes de travail pour la recherche et l'enseignement |
+| [docs/ia.md](docs/ia.md) | emploi par un assistant d'IA : serveur MCP, API OpenAPI, schéma des résultats, [`llms.txt`](llms.txt) |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | comment contribuer |
 | `specs/` | spécifications des fiches des consommations, avec les lectures envisagées |
 
@@ -71,10 +72,16 @@ Python 3.11 ou plus et numpy ; openpyxl et pytest pour les outils et les tests.
     python -m banc.sortie_rsee <rsee.xml> [sortie.xml]      # RSEE recalculé et comparaison champ à champ
     python -m banc.cep_total <rsee.xml>                      # Cep d'un projet, poste par poste
     python -m openbce.api --port 8765                        # API HTTP : GET /version, POST /calcul
+    python -m openbce.serveur_mcp                            # serveur MCP en stdio, pour un assistant d'IA
 
 API : `POST /calcul` avec le RSEE en corps ; la réponse est le RSEE recalculé, avec l'en-tête `X-Openbce-Resume`
 (Bbio, Cep, DH par bâtiment) ; `POST /calcul?format=json` renvoie le résumé seul. Le fichier reçu est effacé après le
-calcul. Un `Dockerfile` est fourni (python:3.12-slim et numpy, données météo montées en volume).
+calcul. Description complète : [docs/openapi.yaml](docs/openapi.yaml). Un `Dockerfile` est fourni (python:3.12-slim et
+numpy, données météo montées en volume).
+
+Assistant d'IA : le serveur MCP expose les outils `version`, `lire_rsee`, `calculer`, `comparer` et `variante` (étude
+d'une modification des entrées). Installation dans Claude Code :
+`claude mcp add openbce -- python /chemin/vers/openbce/openbce/serveur_mcp.py`. Détails : [docs/ia.md](docs/ia.md).
 
 ## Organisation du code
 
