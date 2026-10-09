@@ -3,6 +3,8 @@ message: "Pour citer OpenBCE, merci d'utiliser les informations ci-dessous."
 title: "OpenBCE : moteur de calcul libre de la méthode Th-BCE 2020 (RE2020)"
 type: software
 authors:
+  - family-names: "PLANTAZ"
+    given-names: "Cédric"
   - name: "ARKEMEP"
 version: "0.1.0"
 date-released: "2026-10-09"

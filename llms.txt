@@ -1,6 +1,6 @@
 # OpenBCE
 
-> Moteur de calcul libre (AGPL-3.0, droits ARKEMEP) de la méthode Th-BCE 2020 de la réglementation environnementale
+> Moteur de calcul libre (AGPL-3.0 ; auteur Cédric PLANTAZ, droits ARKEMEP) de la méthode Th-BCE 2020 de la réglementation environnementale
 > française RE2020, écrit depuis le texte publié de l'annexe III de l'arrêté du 4 août 2021 modifié. Il lit un RSEE
 > (fichier XML d'une étude RE2020), recalcule Bbio, Cep et DH, et documente chaque lecture du texte. Logiciel non
 > évalué : ses résultats ne sont pas opposables et ne valent ni attestation ni étude réglementaire. Python et numpy.

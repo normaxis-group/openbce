@@ -3,7 +3,7 @@ name = "openbce"
 version = "0.1.0"
 description = "Moteur de calcul Th-BCE RE2020 libre"
 license = "AGPL-3.0-or-later"
-authors = [{ name = "ARKEMEP" }]
+authors = [{ name = "Cédric PLANTAZ" }, { name = "ARKEMEP" }]
 requires-python = ">=3.11"
 dependencies = ["numpy"]
 

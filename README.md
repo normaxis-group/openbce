@@ -8,7 +8,7 @@
 # OpenBCE
 
 **Moteur de calcul libre de la méthode Th-BCE 2020 de la RE2020**, écrit depuis le texte publié de l'annexe III de
-l'arrêté du 4 août 2021 modifié. Droits : ARKEMEP. Licence : AGPL-3.0-or-later.
+l'arrêté du 4 août 2021 modifié. Auteur : Cédric PLANTAZ. Droits : ARKEMEP. Licence : AGPL-3.0-or-later.
 
 > **Avertissement.** OpenBCE n'est pas un logiciel évalué au sens du règlement d'évaluation des logiciels RE2020. Ses
 > résultats ne sont pas opposables : il ne produit pas d'attestation, ne peut pas fonder une étude réglementaire et ne
