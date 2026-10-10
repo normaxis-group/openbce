@@ -76,14 +76,22 @@ Ces écarts sont détaillés dans le tableau ci-dessous et dans les commentaires
 | Bbio du logement | fait | 167 zones : écart médian +0,1 %, 160 dans ±5 % (mesure du 08/10/2026, voir le résumé) |
 | Stores enroulables | fait | essai sur 4 projets, Bbio entre -4,3 % et +3,9 % |
 | Stores vénitiens, espaces tampons vitrés | à faire | - |
-| Usages 4 à 28 (enseignement, hôtels, restauration, commerces, santé, industrie, sport...) | codé, non validé | tables de l'annexe III lues et contre-lues (`specs/usages/`) : débits conventionnels (tableau 56-1), éclairage par local (tableau 78), ECS (tableau 277), ouverture des baies (tableau 43), exigences (annexe R. 172-4) ; aucun récapitulatif de référence, le résumé porte un avertissement |
+| Usages 4 à 28 (enseignement, hôtels, restauration, commerces, santé, industrie, sport...) | codé, non validé (sauf les seuils des usages 4 et 5, validés sur l'OPEE) | tables de l'annexe III lues et contre-lues (`specs/usages/`) : débits conventionnels (tableau 56-1), éclairage par local (tableau 78), ECS (tableau 277), ouverture des baies (tableau 43), exigences (annexe R. 172-4) ; aucun récapitulatif de référence, le résumé porte un avertissement |
 | Confort d'été (DH, mode Th-DC) | en cours | `groupe.calculer(thd=...)`, `banc.confort` : 12 groupes de 8 projets, écart médian nul, écart absolu médian 77 °C.h, 8 dans ±10 % |
-| Bbio_max, DH_max (annexe R. 172-4) | fait | `exigences.py`, `banc.exigences` : Mbgeo juste sur 732 groupes, DH_max juste sur 761 (usages 1 à 3) ; tables des 28 usages, Cep,nr_max et Cep_max non confrontés |
+| Bbio_max, Cep,nr_max, Cep_max, DH_max (annexe R. 172-4) | fait pour les usages 1 à 5 | `exigences.py` ; `banc.exigences` sur les RSEE du lot (Mbgeo juste sur 732 groupes, DH_max sur 761) ; `banc.opee_exigences` sur les données ouvertes de l'observatoire OPEE (113 016 zones, août 2026) : Mbgeo et Mcgeo 100 %, Bbio_maxmoyen, Cep,nr_maxmoyen et Cep_maxmoyen retrouvés à 100 % (99,8 % en collectif), Mbsurf_tot et Mcsurf_tot 100 % en enseignement, DH_max 100 % ; usages 6 à 28 : tables lues dans le texte, aucun RSEE déposé avant août 2026 |
 | Consommations (Cep) | en cours | voir ci-dessous ; spécifications du lot 2 dans `specs/` |
 | Carbone | à faire | - |
 
 Mesure faite sur un fichier par projet (46 projets de logement). Les valeurs que le texte réglementaire ne donne pas
 sont déduites des RSEE par le banc et consignées comme telles dans le code.
+
+Les seuils et modulations sont aussi confrontés aux données ouvertes de l'observatoire de la performance énergétique et
+environnementale (OPEE, data.gouv.fr, table « zone » de l'archive d'août 2026, 113 016 zones d'usages 1 à 5) par
+`python -m banc.opee_exigences zone.csv projet.csv`. Deux enseignements : la modulation Mcgeo des maisons en H2d et H3
+sous 400 m valait -0,15 et -0,20 pour les permis déposés avant 2025 (`MCGEO_AVANT_2025`), et la colonne Mccat de l'OPEE est
+vide sur quelques zones de catégorie 2 dont le seuil publié contient pourtant la modulation du texte. Reste ouvert : dix zones
+de bureaux en catégorie 3 portent un Mbbruit compris entre 0,05 et 0,38, sans doute un prorata des surfaces de groupe en
+catégorie 3 que le moteur ne fait pas (il applique 0,4 à la zone).
 
 ### Consommations (Cep), poste par poste
 

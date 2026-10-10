@@ -167,6 +167,10 @@ MCGEO = {
     28: ((0.0, 0.1, 0.05, -0.1, 0.0, 0.05, 0.35, 0.25), (0.0, 0.05, 0.05, -0.05, 0.0, -0.05, 0.15, 0.05), (0.05, 0.1, 0.05, 0.0, 0.05, 0.0, 0.1, -0.05)),
 }
 MCGEO[5] = MCGEO[4]      # p. 36
+# Permis déposés avant 2025 : les RSEE de l'observatoire OPEE (113 016 zones, août 2026) portent pour les maisons en H2d et H3
+# sous 400 m les valeurs -0,15 et -0,20 (3 109 et 9 827 zones de 2022 à 2024) et -0,10 et -0,15 à partir de 2025 (texte en
+# vigueur) ; aucune autre cellule de Mcgeo ne change entre les deux périodes (banc/opee_exigences.py).
+MCGEO_AVANT_2025 = {1: {("H2d", 0): -0.15, ("H3", 0): -0.20}}
 # Mcsurf_moy sur la surface moyenne des logements (p. 33 et 34), Mcsurf_tot sur la somme des Sref de même usage (p. 33 à 56) :
 # mêmes morceaux que Mbsurf_tot, diviseur Cep,nr_maxmoyen. Usages absents : 0. Industrie 8 h à 18 h (24) : fonction à part.
 MCSURF_MOY = {1: ((100, 49.5, -0.55), (150, 14.5, -0.2), (None, -15.5, 0.0)), 2: ((40, 45.0, -1.0), (80, 15.0, -0.25), (120, 3.0, -0.1), (None, -9.0, 0.0))}
@@ -179,8 +183,10 @@ MCCAT = {1: {2: (0, 0, 0, 0, 0, 0, 0.1, 0.1)}, 2: {2: (0, 0, 0, 0, 0, 0, 0.1, 0.
          12: {3: (0, 0.05, 0.05, 0, 0.05, 0.05, 0.2, 0.25)}, 17: {3: 0.05}}
 
 
-def mcgeo(usage: int, zone: str, altitude: float) -> float:
+def mcgeo(usage: int, zone: str, altitude: float, annee_permis: int = 2026) -> float:
     ligne = 0 if altitude < 400 else (1 if altitude <= 800 else 2)
+    if annee_permis < 2025 and (zone, ligne) in MCGEO_AVANT_2025.get(usage, {}):
+        return MCGEO_AVANT_2025[usage][(zone, ligne)]
     return MCGEO[usage][ligne][ZONES.index(zone)]
 
 
@@ -211,7 +217,7 @@ def cep_max(usage: int, zone: str, altitude: float, sref: float, nb_logements: i
             annee_permis: int = 2026, reseau_classe: bool = False) -> dict[str, float]:
     """Cep,nr_max et Cep_max de la zone (chapitre II, II). Mccombles n'est pas codé (0) : le texte le réserve à l'usage 1 et le
     banc ne l'a pas encore mesuré. Aucune de ces valeurs n'est confrontée aux RSEE à ce jour."""
-    m = dict(mcgeo=mcgeo(usage, zone, altitude), mccombles=0.0, mcsurf_moy=mcsurf_moy(usage, sref, nb_logements),
+    m = dict(mcgeo=mcgeo(usage, zone, altitude, annee_permis), mccombles=0.0, mcsurf_moy=mcsurf_moy(usage, sref, nb_logements),
              mcsurf_tot=mcsurf_tot(usage, sref_usage, annee_permis, reseau_classe), mccat=mccat(usage, zone, categorie_ce))
     facteur = 1 + sum(m.values())
     m["cep_nr_max"] = CEP_NR_MAX_MOYEN[usage] * facteur
