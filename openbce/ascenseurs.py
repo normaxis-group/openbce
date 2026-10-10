@@ -15,6 +15,8 @@ Avec ces deux lectures l'écart est inférieur à 4 % de la consommation des cab
 """
 from __future__ import annotations
 
+import numpy as np
+
 G = 9.81                # m/s²
 E_PORTE = 1188.0        # J par cycle d'ouverture et de fermeture
 DECO = 1.2              # masse de la cabine vide rapportée à la charge utile
@@ -85,6 +87,15 @@ def cabine(asc, personnes_voyages: float, habitation: bool) -> float:
         return (dp1 * min(1.0, t1 / pause) + dp2 * min(1.0, (t1 + t2) / pause) + (pti - dp1 - dp2)) * duree / 3600
 
     return etm + veille(t_jour, ndem) + veille(t_nuit, 365)                                    # (2304, 2305)
+
+
+def profil_mobilite(cal, usage: int) -> np.ndarray:
+    """Profil horaire de mobilité de l'usage (tableau « mobilité » du tableur officiel, équation 31), normé à 1 sur l'année ;
+    sert à étaler la consommation annuelle des ascenseurs (2306) quand on a besoin de l'heure."""
+    from . import scenarios
+    h, a = scenarios._horaire(cal, scenarios._tableau(usage, "mobilit"))
+    prof = np.nan_to_num(h * a)
+    return prof / prof.sum() if prof.sum() > 0 else np.full(len(prof), 1.0 / len(prof))
 
 
 def occupants_conventionnels(batiment) -> dict[int, float]:

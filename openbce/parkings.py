@@ -84,6 +84,14 @@ def ventilation(parking, cal: Calendrier) -> np.ndarray:
     return np.where(dreq < d1, dreq * p1 / d1, dreq * p2 / d2)                                           # (2340 à 2343)
 
 
+def du_projet_horaire(entree, cal: Calendrier) -> np.ndarray:
+    """Consommation horaire de tous les parkings du projet (éclairage et ventilation), Wh."""
+    total = np.zeros(len(cal.case))
+    for p in entree.tous("Parking"):
+        total += eclairage(p, cal) + ventilation(p, cal)
+    return total
+
+
 def du_projet(entree, cal: Calendrier, sref: dict[tuple[int, int], float]) -> dict[tuple[int, int], float]:
     """Consommation annuelle des parkings attribuée à chaque zone, Wh, par (Index de bâtiment, Index de zone).
 

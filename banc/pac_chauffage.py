@@ -137,6 +137,40 @@ def comparer(chemin: str):
     for id_gen, gen in gens.items():
         if id_gen not in qch:
             continue
+        poele = next((c for c in gen.enfants if c.nom == "Generateur_Poele_Insert"), None)
+        if poele is not None:
+            # Poêle ou insert à bois (8.22) : fonctionnement au nominal pendant une fraction d'heure égale au taux de charge
+            # (1227), pertes proportionnelles à la charge (1228 à 1230), auxiliaire de ventilation au prorata du temps de
+            # fonctionnement (1234), reste reporté au pas suivant (1225, 1226). Le bois compte 1 en énergie primaire, 0 en non
+            # renouvelable (tableau 252).
+            rdim = max(poele.entier("Rdim", 1), 1)
+            pn = poele.nombre("Pngen", 0.0) * 1000.0 * rdim                      # Wh par heure, tous appareils
+            eta = poele.nombre("Eta_H_sys_N", 0.0) / 100.0
+            paux = poele.nombre("Pauxvent", 0.0) * rdim
+            pertes_100 = pn * (1.0 - eta) / eta if eta > 0 else 0.0           # (1228)
+            ch_j = saison_ch[id_gen]
+            bois = waux = fourni = 0.0
+            report = 0.0
+            mois = np.zeros(12)
+            elec_h = np.zeros(n)
+            for h in range(n):
+                en_saison = bool(ch_j[min(jours[h], len(ch_j) - 1)])
+                q = (float(qch[id_gen][h]) + report) if en_saison else 0.0
+                qfou = min(q, pn) if pn > 0 else 0.0                              # (1226)
+                tau = qfou / pn if pn > 0 else 0.0                                # (1227)
+                bois += qfou + tau * pertes_100                                   # (1230, 1231)
+                waux += paux * tau                                                # (1234)
+                elec_h[h] = paux * tau
+                fourni += qfou
+                mois[int(cal.mois_civil[h]) - 1] += qfou + tau * pertes_100
+                report = q - qfou
+            surface = sum(x for _, _, x in desservis[id_gen])
+            ref_ch = sum(d["cef_ch_ref"] * x for _, d, x in desservis[id_gen] if d["cef_ch_ref"] == d["cef_ch_ref"])
+            resultats.append((id_gen, "poêle ou insert à bois", dict(sys=0, demande=float(qch[id_gen].sum()), fourni=fourni, elec_pac=waux, elec_joule=0.0,
+                                                                   reste=report, heures=0, surface=surface, ref=ref_ch, gaz=bois, ref_ecs=0.0, gaz_ecs=0.0, ref_ch=ref_ch, mois=mois,
+                                                                   mois_ref=sum((d["mois_ref"] if d["mois_ref"] is not None and len(d["mois_ref"]) == 12 else np.zeros(12)) * x for _, d, x in desservis[id_gen]),
+                                                                   groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], pertes_reseau=0.0, waux_reseau=0.0, elec_h=elec_h, bois=True)))
+            continue
         combustion = next((c for c in gen.enfants if c.nom in ("Generateur_Combustion", "Generateur_Reseau_Fourniture")), None)
         ballon_combustion = combustion is None and any(c.nom in ("Source_Ballon_Base_Combustion", "Source_Ballon_Base_Reseau_Fourniture")
                                                        and c.entier("Id_Fou_Gen_1", c.entier("Id_Fou_Gen", 3)) in (1, 4)

@@ -17,9 +17,28 @@ import numpy as np
 from banc import ecs_cef, pac_chauffage, pac_froid
 from banc.besoins import METEO, zone_climatique
 from banc.cep import comparer as cep_comparer
-from openbce import bilans, climat, meteo, photovoltaique, rsee
+from openbce import ascenseurs, bilans, calendrier, climat, meteo, parkings, photovoltaique, rsee
 
 COEF_EP_ELEC = 2.3
+
+
+def _profil_deplacement(p, index_bat: int, n: int) -> np.ndarray:
+    """Forme horaire des déplacements du bâtiment, normée à 1 : parkings du projet (10.3, 10.4) et ascenseurs étalés sur le
+    profil de mobilité des zones, pondérés par leurs consommations annuelles calculées ; uniforme à défaut."""
+    cal = calendrier.construire()
+    bat = next((x for x in p.entree.directs("Batiment") if x.entier("Index") == index_bat), None)
+    if bat is None:
+        return np.full(n, 1.0 / n)
+    forme = np.zeros(n)
+    try:
+        park = parkings.du_projet_horaire(p.entree, cal)
+        forme += park
+        asc = ascenseurs.du_batiment(bat, ascenseurs.occupants_conventionnels(bat))
+        for z in bat.directs("Zone"):
+            forme += asc.get(z.entier("Index"), 0.0) * ascenseurs.profil_mobilite(cal, z.entier("Usage"))
+    except (NotImplementedError, KeyError, ValueError):
+        pass
+    return forme / forme.sum() if forme.sum() > 0 else np.full(n, 1.0 / n)
 
 
 def comparer(chemin: str) -> dict:
@@ -125,7 +144,7 @@ def comparer(chemin: str) -> dict:
         # déplacements (ascenseurs, parkings) : pris du RSEE, hors de ce banc
         dep = b.nombre("O_Cef_imp_deplacement_annuel", 0.0) * b.nombre("O_SREF", 0.0)
         postes["dep"] = postes.get("dep", 0.0) + dep; ref["dep"] = ref.get("dep", 0.0) + dep
-        w_elec[b.entier("Index")] += dep * 1000 / n                          # profil horaire non calculé : uniforme
+        w_elec[b.entier("Index")] += dep * 1000 * _profil_deplacement(p, b.entier("Index"), n)
     cef = sum(postes.values())
     pv = sum(b.nombre("O_Cef_elec_AC_ecs_annuel", 0.0) * b.nombre("O_SREF", 0.0) for b in p.sortie.tous("Sortie_Batiment_C")) / sref
     # production photovoltaïque et autoconsommation (13.4, 2525 à 2534) : minimum horaire de la production et de la consommation
