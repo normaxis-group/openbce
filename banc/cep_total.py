@@ -59,7 +59,9 @@ def comparer(chemin: str) -> dict:
     zone_bat = {}                                             # index de zone -> (index de bâtiment, surface)
     sref_bat = {b.entier("Index"): b.nombre("O_SREF", 0.0) for b in p.sortie.tous("Sortie_Batiment_C")}
 
-    def repartir(serie, groupes=None):
+    w_poste = collections.defaultdict(lambda: np.zeros(n))    # par poste : électricité consommée par heure, tous bâtiments, Wh (diagnostic de l'autoconsommation)
+
+    def repartir(serie, groupes=None, poste="ch"):
         """Ajoute une série horaire aux bâtiments : selon les zones desservies si on les connaît, sinon au prorata des SREF."""
         poids = {}
         for z in groupes or ():
@@ -71,15 +73,18 @@ def comparer(chemin: str) -> dict:
         total = sum(poids.values()) or 1.0
         for b, x in poids.items():
             w_elec[b] += serie * (x / total)
+        w_poste[poste] += serie
     for *_, surface, aux, aux_ref, ecl, ecl_ref, ch, ch_ref, fr, fr_ref, e1, e2, e3, d in lignes:
         postes["aux_vent"] += aux * surface; ref["aux_vent"] += aux_ref * surface
         zone_bat.setdefault(d["zone_index"], (d["bat"], 0.0))
         zone_bat[d["zone_index"]] = (d["bat"], zone_bat[d["zone_index"]][1] + surface)
         w_elec[d["bat"]] += d["aux_h"]
         w_mob[d["bat"]] += d["mob_h"]
+        w_poste["aux_vent"] += d["aux_h"]; w_poste["mobilier"] += d["mob_h"]
         if ecl is not None:
             postes["ecl"] += ecl * surface; ref["ecl"] += ecl_ref * surface
             w_elec[d["bat"]] += d["ecl_h"]
+            w_poste["ecl"] += d["ecl_h"]
         s = next((g for (b, z, gi), g in dh.items() if (b, z, gi) == (d["bat"], d["zone_index"], d["groupe"])), None)
         g = d["noeud"]
         fr_ref_g = d["cef_fr_ref"] if d["cef_fr_ref"] == d["cef_fr_ref"] else 0.0
@@ -89,10 +94,10 @@ def comparer(chemin: str) -> dict:
             forfait = bilans.forfait_froid(d["usage"], False, s.nombre("O_NbDegresHeures", 0.0), s.nombre("O_NbDegresHeures_max", 0.0) or None, zone_clim, alt) * surface
             postes["fr"] += forfait
             poids = np.asarray(d["fr_h"], dtype=float)
-            w_elec[d["bat"]] += forfait * 1000 * (poids / poids.sum() if poids.sum() > 0 else np.full(n, 1.0 / n))
+            # le forfait est ajouté hors du bilan horaire : la référence ne lui impute aucune autoconsommation (O_Cef_elec_AC_fr = 0)
         else:
             postes["fr"] += fr_ref_g * surface
-            w_elec[d["bat"]] += fr_ref_g * surface * 1000 / n
+            w_elec[d["bat"]] += fr_ref_g * surface * 1000 / n; w_poste["fr"] += fr_ref_g * surface * 1000 / n
             if g.entier("Is_Climatise", 0) == 1:
                 non_modelise.append(f"froid réel groupe {d['zone_index']}.{d['groupe']}")
         ref["ch"] += (d["cef_ch_ref"] if d["cef_ch_ref"] == d["cef_ch_ref"] else 0.0) * surface
@@ -115,7 +120,7 @@ def comparer(chemin: str) -> dict:
     for id_gen, nom, r in pac_froid.comparer(chemin):
         if r is not None and r["ref"] == r["ref"]:
             postes["fr"] += (r["elec"] + r.get("reseau", 0.0)) / 1000 - r["ref"]
-            repartir(r.get("elec_h", np.zeros(n)) - r["ref"] * 1000 / n, r.get("groupes"))
+            repartir(r.get("elec_h", np.zeros(n)) - r["ref"] * 1000 / n, r.get("groupes"), "fr")
             gaz += r.get("reseau", 0.0) / 1000                                   # énergie réseau : coefficient 1 comme le gaz
             non_modelise = [x for x in non_modelise if not x.startswith("froid réel")]
     # ECS
@@ -131,21 +136,23 @@ def comparer(chemin: str) -> dict:
             # est prise au prorata de la demande, comme pour le froid réel, et le cas est signalé
             non_modelise.append(f"ECS génération {id_gen} ({asm})")
             postes["ecs"] += ref_ecs * demande / demande_ecs_tot
-            repartir(np.full(n, ref_ecs * demande / demande_ecs_tot * 1000 / n))
+            repartir(np.full(n, ref_ecs * demande / demande_ecs_tot * 1000 / n), None, "ecs")
             continue
         postes["ecs"] += (r["elec"] + r.get("gaz", 0.0)) / 1000
         gaz += r.get("gaz", 0.0) / 1000
         postes["aux_dist"] += r["circulateur"] / 1000
-        repartir(r.get("elec_h", np.zeros(n)) + r.get("circulateur_h", np.zeros(n)))
+        repartir(r.get("elec_h", np.zeros(n)) + r.get("circulateur_h", np.zeros(n)), None, "ecs")
     ref["ecs"] = ref_ecs
     for b in p.sortie.tous("Sortie_Batiment_C"):
         for z in b.tous("Sortie_Zone_C"):
             for g in z.tous("Sortie_Groupe_C"):
                 ref["aux_dist"] += g.nombre("O_Cef_aux_distribution_annuel", 0.0) * (g.nombre("O_SHAB", 0.0) or g.nombre("O_SU", 0.0))
-        # déplacements (ascenseurs, parkings) : pris du RSEE, hors de ce banc
-        dep = b.nombre("O_Cef_imp_deplacement_annuel", 0.0) * b.nombre("O_SREF", 0.0)
+        # déplacements (ascenseurs, parkings) : pris du RSEE, hors de ce banc ; consommation brute (O_Cef_elec_cons), pas l'import net
+        # de l'autoconsommation, sinon celle-ci serait déduite deux fois (cas 28 : -2,8 kWhep/m²)
+        dep = (b.nombre("O_Cef_elec_cons_deplacement_annuel", 0.0) or (b.nombre("O_Cef_imp_deplacement_annuel", 0.0) + b.nombre("O_Cef_elec_AC_deplacement_annuel", 0.0))) * b.nombre("O_SREF", 0.0)
         postes["dep"] = postes.get("dep", 0.0) + dep; ref["dep"] = ref.get("dep", 0.0) + dep
-        w_elec[b.entier("Index")] += dep * 1000 * _profil_deplacement(p, b.entier("Index"), n)
+        serie_dep = dep * 1000 * _profil_deplacement(p, b.entier("Index"), n)
+        w_elec[b.entier("Index")] += serie_dep; w_poste["dep"] += serie_dep
     cef = sum(postes.values())
     pv = sum(b.nombre("O_Cef_elec_AC_ecs_annuel", 0.0) * b.nombre("O_SREF", 0.0) for b in p.sortie.tous("Sortie_Batiment_C")) / sref
     # production photovoltaïque et autoconsommation (13.4, 2525 à 2534) : minimum horaire de la production et de la consommation
@@ -155,6 +162,7 @@ def comparer(chemin: str) -> dict:
     pv_prod, pv_ac = np.zeros(n), np.zeros(n)
     ac_hors_mob = 0.0                                                        # kWh autoconsommés par les postes du Cep
     pv_par_bat = {}                                                          # index de bâtiment -> (production, autoconsommée, dont postes du Cep), kWh
+    tap_total = np.zeros(n)                                                  # taux d'autoproduction horaire, pondéré par les consommations des bâtiments
     pv_projet = [i for i in p.entree.tous("PV_install") if not any(i is j for bat in p.entree.directs("Batiment") for j in bat.tous("PV_install"))]
     if pv_projet or any(bat.tous("PV_install") for bat in p.entree.directs("Batiment")):
         cl = climat.du_site(meteo.charger(METEO, zone_climatique(p)), simu.texte("Departement"), alt)
@@ -174,6 +182,7 @@ def comparer(chemin: str) -> dict:
             pv_prod += prod
             pv_ac += ac
             pv_par_bat[bat.entier("Index")] = (float(prod.sum()) / 1000, float(ac.sum()) / 1000, float((w_e * tap).sum()) / 1000)
+            tap_total += tap * np.divide(w_tous, w_projet, out=np.zeros(n), where=w_projet > 0)
     w_elec_total = sum(w_elec.values()) if w_elec else np.zeros(n)
     pv_ref = sum(b.nombre("O_Eef_Prod_PV_annuel", 0.0) * b.nombre("O_SREF", 0.0) for b in p.sortie.tous("Sortie_Batiment_C")) / sref
     pv_ac_ref = sum(b.nombre("O_Eef_Prod_PV_AC_annuel", 0.0) * b.nombre("O_SREF", 0.0) for b in p.sortie.tous("Sortie_Batiment_C")) / sref
@@ -185,7 +194,8 @@ def comparer(chemin: str) -> dict:
                 cep_pv=(COEF_EP_ELEC * (cef - gaz - ac_hors_mob) + gaz) / sref,
                 pv_prod=float(pv_prod.sum()) / 1000 / sref, pv_ac_calc=float(pv_ac.sum()) / 1000 / sref, pv_ref=pv_ref, pv_ac_ref=pv_ac_ref, pv_par_bat=pv_par_bat,
                 w_elec_annuel=float(w_elec_total.sum()) / 1000 / sref, cef_elec_annuel=(cef - gaz) / sref,
-                cep_ref_postes=(COEF_EP_ELEC * (sum(ref.values()) - ref_gaz) + ref_gaz) / sref, pv_ac=pv, non_modelise=non_modelise, gaz=gaz / sref, ref_gaz=ref_gaz / sref)
+                cep_ref_postes=(COEF_EP_ELEC * (sum(ref.values()) - ref_gaz) + ref_gaz) / sref, pv_ac=pv, non_modelise=non_modelise, gaz=gaz / sref, ref_gaz=ref_gaz / sref,
+                ac_par_poste={k: float((v * tap_total).sum()) / 1000 / sref for k, v in w_poste.items()}, cons_par_poste={k: float(v.sum()) / 1000 / sref for k, v in w_poste.items()})
 
 
 if __name__ == "__main__":
@@ -197,3 +207,8 @@ if __name__ == "__main__":
     print(f"  Cep {r['cep']:6.1f} / RSEE hors PV {r['cep_ref_postes']:6.1f} kWhep/m² ({r['cep'] / r['cep_ref_postes'] - 1:+.0%}) ; avec autoconsommation PV : {r['cep_pv']:6.1f} / O_Cep_annuel {r['cep_ref']:6.1f} ({r['cep_pv'] / r['cep_ref'] - 1:+.0%})"
           f" | non modélisé : {sorted(set(r['non_modelise'])) or 'rien'}")
     print(f"  PV production {r['pv_prod']:5.2f} / RSEE {r['pv_ref']:5.2f} ; autoconsommée {r['pv_ac_calc']:5.2f} / RSEE {r['pv_ac_ref']:5.2f} kWh/m² ; électricité horaire sommée {r['w_elec_annuel']:6.2f} pour Cef élec {r['cef_elec_annuel']:6.2f}")
+    if r["pv_prod"] > 0:
+        p = rsee.lire(sys.argv[1])
+        bats = p.sortie.tous("Sortie_Batiment_C")
+        ref_ac = {k: sum(b.nombre(f"O_Cef_elec_AC_{c}_annuel", 0.0) * b.nombre("O_SREF", 0.0) for b in bats) / s for k, c in (("ch", "ch"), ("fr", "fr"), ("ecs", "ecs"), ("ecl", "ecl"), ("aux_vent", "auxvent"), ("dep", "deplacement"), ("mobilier", "mobilier"))}
+        print("  autoconsommation par poste (calcul / RSEE, kWh/m²) : " + " | ".join(f"{k} {r['ac_par_poste'].get(k, 0.0):.2f}/{ref_ac[k]:.2f}" for k in ref_ac))

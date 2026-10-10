@@ -46,6 +46,8 @@ def calculer_rsee(chemin_entree: Path, chemin_sortie: Path) -> dict:
         resume.append(dict(batiment=bat["name"], sref=round(sref, 1), bbio_pts=round(bbio, 1), cep=round(bat["cep"]["cep_annuel"], 1),
                            pv_production=round(pv["prod"], 2) if pv else 0.0, pv_autoconsommee=round(pv["ac"], 2) if pv else 0.0,
                            cef=round(bat["cep"]["cef_annuel"], 1), dh_max_groupes=round(dh, 0),
+                           ic_energie=round(bat["ic_energie"]["ic_energie"], 1) if bat.get("ic_energie") else None,
+                           ic_energie_max=round(bat["ic_energie"]["ic_energie_max"], 1) if bat.get("ic_energie") and bat["ic_energie"]["ic_energie_max"] else None,
                            bbio_max=[round(z["bbio_max"]["bbio_max"], 1) for z in bat["zones"] if z.get("bbio_max")]))
     from openbce import usages as mod_usages
     presents = sorted({z["usage"] for bat in calcul["batiments"] for z in bat["zones"]})

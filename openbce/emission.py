@@ -63,6 +63,7 @@ class EmetteurEquivalent:
 # qu'on leur applique 0,2 à 0,4 K. Lecture retenue : la correction θvt n'est appliquée que pour le statut 2 (valeur
 # par défaut), avec la valeur écrite ; θvs n'est pas appliqué (bureaux : +1 % sans, +34 % avec le 1,8 saisi).
 VT_SAISIE_SEULE = True
+VT_TOUS_STATUTS = False       # essai : la valeur saisie est appliquée quel que soit le statut (pas seulement 2)
 VS_IGNORE = True
 
 
@@ -71,7 +72,7 @@ def _vt(e: Noeud, chaud: bool) -> float:
     statut = e.entier("Statut_Variation_Temporelle_Chaud" if chaud else "Statut_Variation_Temporelle_Froid", 0)
     saisie = e.nombre(cle, 0.0)
     if VT_SAISIE_SEULE:
-        return saisie if statut == 2 else 0.0
+        return saisie if (statut == 2 or VT_TOUS_STATUTS) else 0.0
     if saisie:
         return saisie + (0.5 if statut == 2 else 0.0) * (1 if chaud else -1)      # valeur justifiée : + 0,5 K
     arret = e.entier("Couple_Regulateur_Emetteur_Chaud" if chaud else "Couple_Regulateur_Emetteur_Froid", 0)

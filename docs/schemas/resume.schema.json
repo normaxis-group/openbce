@@ -62,6 +62,14 @@
               "type": "number"
             },
             "description": "Bbio_max de chaque zone du bâtiment, points"
+          },
+          "ic_energie": {
+            "type": ["number", "null"],
+            "description": "impact sur le changement climatique des consommations d'énergie importées, kg CO2 eq/m² sur 50 ans (annexe II, 4.3.2)"
+          },
+          "ic_energie_max": {
+            "type": ["number", "null"],
+            "description": "seuil Ic énergie_max du bâtiment, kg CO2 eq/m² ; null si l'usage n'a pas de seuil dans le texte"
           }
         }
       }

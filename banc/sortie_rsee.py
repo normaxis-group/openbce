@@ -14,7 +14,7 @@ import numpy as np
 
 from banc import cep as banc_cep, cep_total, confort
 from banc.besoins import METEO, zone_climatique
-from openbce import aeraulique, calendrier, climat, enveloppe, exigences, groupe, meteo, rsee, scenarios, sortie_rsee
+from openbce import aeraulique, calendrier, carbone, climat, enveloppe, exigences, groupe, meteo, rsee, scenarios, sortie_rsee
 from openbce import usages as mod_usages
 
 
@@ -89,7 +89,24 @@ def calculer(chemin: str) -> dict:
         imp["deplacement"] = total["postes"].get("dep", 0.0) / total["sref"]
         prod_b, ac_b, ac_cep_b = total.get("pv_par_bat", {}).get(bat.entier("Index"), (0.0, 0.0, 0.0))
         pv_b = dict(prod=prod_b / s_bat, ac=ac_b / s_bat, tac=100.0 * ac_b / prod_b if prod_b > 0 else 0.0, exportee=(prod_b - ac_b) / s_bat) if prod_b > 0 and s_bat > 0 else None
+        # Ic énergie (annexe II, 4.3.2) : énergies importées par énergie et poste, nettes de l'autoconsommation (au prorata sur
+        # les postes électriques), gaz distingué sur le chauffage et l'ECS ; seuil avec le facteur de modulation des seuils Cep
+        gaz_ch_b, gaz_ecs_b = gaz_ch / total["sref"], total["postes"].get("ecs_gaz", 0.0) / total["sref"]
+        elec_postes = {"ch": imp["ch"] - gaz_ch_b, "ecs": imp["ecs"] - gaz_ecs_b, "fr": imp["fr"], "ecl": imp["ecl"], "aux_vent": imp["aux_vent"],
+                       "aux_dist": imp["aux_dist"], "dep": imp["deplacement"]}
+        elec_tot = sum(max(v, 0.0) for v in elec_postes.values())
+        reduc = max(0.0, 1.0 - (ac_cep_b / s_bat) / elec_tot) if elec_tot > 0 and s_bat > 0 else 1.0
+        imports = {("elec", k): max(v, 0.0) * reduc for k, v in elec_postes.items()}
+        imports[("gaz", "ch")], imports[("gaz", "ecs")] = gaz_ch_b, gaz_ecs_b
+        ic = carbone.ic_energie(imports)
+        ic_max = None
+        if zones:
+            z0, g0 = zones[0], bat.directs("Zone")[0].directs("Groupe")[0]
+            m = exigences.cep_max(z0["usage"], zone_clim, simu.nombre("Altitude"), sum(g["sref"] for g in z0["groupes"]), z0["nb_logements"], sref_usage[z0["usage"]],
+                                  g0.entier("Categorie_CE", 1), annee)
+            ic_max = carbone.ic_energie_max(z0["usage"], 1 + m["mcgeo"] + m["mccombles"] + m["mcsurf_moy"] + m["mcsurf_tot"] + m["mccat"], annee)
         batiments.append(dict(index=bat.entier("Index"), name=bat.texte("Name"), zones=zones, pv=pv_b,
+                              ic_energie=dict(ic_energie=ic["ic_energie"], ic_energie_annuel=ic["ic_energie_annuel"], ic_energie_max=ic_max, energies_ignorees=ic["energies_ignorees"]),
                               cep=dict(cef_annuel=sum(imp.values()), cep_annuel=total["cep"] - 2.3 * ac_cep_b / total["sref"], imp=imp,
                                        par_energie=dict(elec=sum(imp.values()) - total.get("gaz", 0.0), gaz=total.get("gaz", 0.0)))))
     return dict(name=Path(chemin).stem, batiments=batiments, zones_ignorees=zones_ignorees, version=projet.version_moteur, departement=simu.texte("Departement"), altitude=simu.nombre("Altitude"))

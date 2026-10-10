@@ -45,7 +45,8 @@ Il sert à relire et contrôler un calcul réglementaire, à étudier la sensibi
   contre des récapitulatifs de référence ; les usages 4 à 28 sont codés d'après le texte de l'annexe III
   ([specs/usages/](specs/usages/)) et tout résultat qui en contient porte un avertissement (`usages_non_valides`,
   `avertissement` dans le résumé de l'API et du serveur MCP).
-- Ne couvre pas encore : indicateurs carbone (Ic), solaire thermique, espaces tampons, ventilation naturelle et puits
+- Calcule Ic énergie et son seuil (annexe II de l'arrêté, données d'émission conventionnelles des énergies).
+- Ne couvre pas encore : Ic construction et les autres contributeurs de l'ACV (base INIES), solaire thermique, espaces tampons, ventilation naturelle et puits
   climatiques, PAC à sources eau et sol, bois et cogénération, autres systèmes sous Titre V.
 
 Résultats de validation au 10/10/2026, sur 50 opérations réelles : Cep (production photovoltaïque comprise) à -0,2 % en
