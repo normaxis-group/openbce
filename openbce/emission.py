@@ -105,6 +105,69 @@ def equivalent(groupe: Noeud, chaud: bool = True) -> EmetteurEquivalent:
     return EmetteurEquivalent(min(total, 1.0), pem, PSD, d_vs, d_vt, d_pres, pper)
 
 
+SEUIL_VCV_CH = 20.0           # Wh/m², besoin de chauffage à partir duquel le ventilo-convecteur passe en moyenne vitesse (p. 507)
+SEUIL_VCV_FR = 20.0           # Wh/m², idem en froid (seuil écrit -20 sur un besoin négatif)
+
+
+@dataclass
+class VentilateurLocal:
+    """Ventilateurs d'un émetteur à recyclage d'air (ventilo-convecteur, split) : fiche 8.1, 811 à 813, Th-C seulement.
+    `gest` : 1 manuelle (marche permanente, régime choisi au premier pas d'occupation), 2 automatique à marche permanente
+    (super petite vitesse sans besoin si l'appareil en dispose), 3 automatique avec arrêt sans besoin. En relance, grande
+    vitesse. Actifs seulement pendant les saisons de fonctionnement de l'émetteur (811)."""
+    gest: int
+    spv: bool
+    p_gv: float
+    p_mv: float
+    p_pv: float
+    p_spv: float
+    chaud: bool
+    froid: bool
+    w_ch: float               # part de l'émetteur dans la demande de chauffage du groupe (798)
+    w_fr: float
+    etat: float = 0.0         # W : dernier régime (gestion manuelle)
+
+    def heure(self, bch: float, bfr: float, surface: float, occupe: bool, occupe_prec: bool, relance: bool, aut_ch: bool, aut_fr: bool) -> float:
+        """Puissance des ventilateurs locaux à cette heure, W (= Wh). `bch`, `bfr` : besoins du groupe de l'heure, Wh."""
+        if self.gest <= 0 or not ((self.chaud and aut_ch) or (self.froid and aut_fr)):                     # (811)
+            self.etat = 0.0
+            return 0.0
+        q_ch = bch * self.w_ch if (self.chaud and aut_ch) else 0.0
+        q_fr = bfr * self.w_fr if (self.froid and aut_fr) else 0.0
+        besoin = q_ch > 0 or q_fr > 0
+        moyenne = q_ch > self.w_ch * surface * SEUIL_VCV_CH or q_fr > self.w_fr * surface * SEUIL_VCV_FR
+        if relance:
+            self.etat = self.p_gv
+        elif self.gest == 1:                                                                               # (812) manuelle
+            if occupe and not occupe_prec:
+                self.etat = self.p_mv if moyenne else self.p_pv
+            elif self.etat <= 0:
+                self.etat = self.p_pv
+        elif self.gest == 2:
+            self.etat = (self.p_spv if self.spv else self.p_pv) if not besoin else (self.p_mv if moyenne else self.p_pv)
+        else:
+            self.etat = 0.0 if not besoin else (self.p_mv if moyenne else self.p_pv)
+        return self.etat
+
+
+def ventilateurs_locaux(groupe: Noeud) -> list[VentilateurLocal]:
+    """Ventilateurs locaux des émetteurs du groupe (Gest_vcv > 0), avec leur part dans les demandes de chaud et de froid."""
+    ems = groupe.directs("Emetteur")
+    tot_ch = sum(e.nombre("Rat_s_ch", 0.0) * e.nombre("Rat_t_ch", 1.0) for e in ems if e.entier("Is_emetteur_chaud", 0) == 1) or 1.0
+    tot_fr = sum(e.nombre("Rat_s_fr", 0.0) * e.nombre("Rat_t_fr", 1.0) for e in ems if e.entier("Is_emetteur_froid", 0) == 1) or 1.0
+    out = []
+    for e in ems:
+        gest = e.entier("Gest_vcv", 0)
+        if gest <= 0:
+            continue
+        chaud, froid = e.entier("Is_emetteur_chaud", 0) == 1, e.entier("Is_emetteur_froid", 0) == 1
+        out.append(VentilateurLocal(gest, e.entier("I_spv", 0) == 1, e.nombre("P_VCV_gv", 0.0), e.nombre("P_VCV_mv", 0.0), e.nombre("P_VCV_pv", 0.0),
+                                    e.nombre("P_VCV_spv", 0.0), chaud, froid,
+                                    e.nombre("Rat_s_ch", 0.0) * e.nombre("Rat_t_ch", 1.0) / tot_ch if chaud else 0.0,
+                                    e.nombre("Rat_s_fr", 0.0) * e.nombre("Rat_t_fr", 1.0) / tot_fr if froid else 0.0))
+    return out
+
+
 def relance(consigne: np.ndarray, type_programmation: int, te: np.ndarray, base_ext: float, chaud: bool = True,
             etat: np.ndarray | None = None) -> np.ndarray:
     """Consigne de relance (845 à 848) : la consigne de confort est anticipée de la durée de relance avant chaque

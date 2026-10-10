@@ -92,6 +92,9 @@ class ThC:
     # leur électricité est rendue dans Besoins.brasseurs_w (comptée avec les auxiliaires de ventilation)
     brasseurs: list = ()
     volume: float = 0.0
+    # ventilateurs locaux des émetteurs à recyclage d'air (8.1, 811 à 813) : électricité dans Besoins.ventilateurs_locaux_w
+    ventilateurs_locaux: list = ()
+    surface: float = 0.0
 
 
 @dataclass
@@ -109,6 +112,7 @@ class Besoins:
     etats_reseau: list | None = None    # Th-C : par heure, états des réseaux hydrauliques du groupe (distribution.EtatReseau)
     recup_reseau: np.ndarray | None = None   # Wh : pertes des réseaux rendues au groupe à l'heure suivante
     brasseurs_w: np.ndarray | None = None    # Th-C : électricité des brasseurs d'air, Wh par heure (1662 à 1665)
+    ventilateurs_locaux_w: np.ndarray | None = None   # Th-C : électricité des ventilateurs des ventilo-convecteurs, Wh par heure (811 à 813)
 
 
 _SAISON_GPM = {saisons.CHAUFFAGE: protections.HIVER, saisons.MI_SAISON: protections.MI_SAISON, saisons.MIXTE: protections.MI_SAISON,
@@ -170,6 +174,8 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
     t_air = np.zeros(n)
     etats_reseau = [] if (thc and thc.reseaux_chaud) else None
     brasseurs_w = np.zeros(n) if (thc and thc.brasseurs) else None
+    vcv_w = np.zeros(n) if (thc and thc.ventilateurs_locaux) else None
+    occupe_prec = False
     recup_reseau = np.zeros(n) if etats_reseau is not None else None
     recup_prec = 0.0
     mq, top_fin, ti_fin, top_max_jour, top_max_veille = 18.0, 18.0, 18.0, 0.0, 0.0
@@ -347,6 +353,10 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
                 d_ba = max(0.0, conf_ba - cf_ba)
             brasseurs.delta_theta_op(thc.brasseurs, usage, occupe, automate.refroidissement, hl_ba, top_fin, cf_ba, d_ba, fin.rm, fin.i, thc.volume)
             brasseurs_w[h] = brasseurs.puissance(thc.brasseurs)
+        if vcv_w is not None:                                          # ventilateurs locaux (8.1) : régime selon le besoin de l'émetteur
+            rel = bool(thc.consigne_ch[h] > sc.consigne_ch[h] or thc.consigne_fr[h] < sc.consigne_fr[h])
+            vcv_w[h] = sum(v.heure(bch[h], bfr[h], thc.surface, occupe, occupe_prec, rel, automate.chauffage, automate.refroidissement) for v in thc.ventilateurs_locaux)
+        occupe_prec = occupe
         if thd:
             delta_ba = brasseurs.delta_theta_op(thd.brasseurs, usage, occupe, automate.refroidissement, heure_legale, top_fin,
                                                 consigne_fr, d_adapt, fin.rm, fin.i, thd.volume)
@@ -355,7 +365,7 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
                 dh += max(0.0, t.op - seuil)                                                                     # (2552)
                 for k, marge in enumerate((0.0, 1.0, 2.0)):
                     nb_inconf[k] += int(t.op >= seuil + marge)                                                        # (2549 à 2551)
-    return Besoins(bch, bfr, becl, top, rmoy, jours_saison[:n // 24], einat, dh, tuple(nb_inconf), t_air, etats_reseau, recup_reseau, brasseurs_w)
+    return Besoins(bch, bfr, becl, top, rmoy, jours_saison[:n // 24], einat, dh, tuple(nb_inconf), t_air, etats_reseau, recup_reseau, brasseurs_w, vcv_w)
 
 
 def _sonde(t: thermique.Temperatures, psd: float = P_SD) -> float:

@@ -39,7 +39,7 @@ def _thc(zone, g, usage, sc_g, cl, ch_impose=None, fr_impose=None, b_tampons=Non
                       emission.relance(sc_g.consigne_ch, g.entier("Type_Pgrm_Ch", 1), cl.te, float(np.min(cl.base_ext)), True, sc_g.etat_ch),
                       emission.relance(sc_g.consigne_fr, g.entier("Type_Pgrm_Fr", 1), cl.te, float(np.min(cl.base_ext)), False, sc_g.etat_fr),
                       g.entier("Is_Climatise", 0) == 1, ch_impose, fr_impose, reseaux_chaud(g, b_tampons),
-                      brasseurs.lire(g, usage, surface), g.nombre("V", 2.5 * surface))
+                      brasseurs.lire(g, usage, surface), g.nombre("V", 2.5 * surface), emission.ventilateurs_locaux(g), surface)
 
 
 def saisons_batiment(bat, cl, cal, b_tampons=None):
@@ -105,6 +105,8 @@ def comparer(chemin: str):
                 aux_h = consommation.puissance_ventilateurs(zone, g, usage, sc_g.ventilation)
                 if b.brasseurs_w is not None:                                         # brasseurs d'air (8.32) : avec les auxiliaires de ventilation
                     aux_h = aux_h + b.brasseurs_w
+                if b.ventilateurs_locaux_w is not None:                               # ventilateurs des ventilo-convecteurs (8.1, 811 à 813)
+                    aux_h = aux_h + b.ventilateurs_locaux_w
                 aux = aux_h.sum() / 1000 / surface
                 ecl = b.eclairage.sum() / 1000 / surface
                 ref = lambda k: s.nombre(k, float("nan")) if s else float("nan")

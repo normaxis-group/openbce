@@ -39,7 +39,7 @@ Il sert à relire et contrôler un calcul réglementaire, à étudier la sensibi
   chaudières gaz et fioul, les réseaux de chaleur et de froid, les ballons et chauffe-eau thermodynamiques, la
   ventilation simple et double flux, l'éclairage, les ascenseurs et parkings, la production photovoltaïque et son
   autoconsommation, les réseaux mixtes à modules thermiques d'appartement (MTA, fiche 16.8), l'électricité des
-  brasseurs d'air.
+  brasseurs d'air et des ventilateurs des ventilo-convecteurs.
 - Calcule les 28 usages de la méthode (scénarios, débits conventionnels, éclairage par type de local, besoins d'ECS,
   seuils Bbio_max, Cep_max et DH_max). Seuls les usages 1 à 3 (maisons, logements collectifs, bureaux) sont validés
   contre des récapitulatifs de référence ; les usages 4 à 28 sont codés d'après le texte de l'annexe III
