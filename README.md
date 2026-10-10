@@ -49,7 +49,7 @@ Il sert à relire et contrôler un calcul réglementaire, à étudier la sensibi
   climatiques, PAC à sources eau et sol, bois et cogénération, autres systèmes sous Titre V.
 
 Résultats de validation au 10/10/2026, sur 50 opérations réelles : Cep (production photovoltaïque comprise) à -0,2 % en
-médiane, écart absolu médian 2,2 %, les 50 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones ;
+médiane, écart absolu médian 2,1 %, les 50 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones ;
 seuils réglementaires des usages 1 à 5 retrouvés sur 113 016 zones de l'observatoire OPEE. Détail, protocole et écarts connus :
 [docs/validation.md](docs/validation.md).
 

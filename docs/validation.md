@@ -41,7 +41,7 @@ Le banc compare, poste par poste, ce que calcule OpenBCE aux sorties que porte l
 | Bbio_max et modulations | 732 groupes | Mbgeo exact partout ; DH_max exact sur 761 groupes |
 | Besoins d'eau chaude sanitaire | 182 groupes | rapport médian 1,002 à 1,003 |
 | DH, confort d'été | 12 groupes de 8 opérations | 8 dans ±10 %, biais de +10 à +15 % ; rafraîchissement adiabatique non modélisé |
-| Cep | 50 opérations (électricité, gaz, réseaux) | hors production locale : écart médian -0,2 %, écart absolu médian 1,5 %, 50 dans ±10 % ; avec l'autoconsommation photovoltaïque, contre O_Cep_annuel (valeur réglementaire) : écart médian -0,2 %, écart absolu médian 2,2 %, 33 dans ±5 %, 50 dans ±10 % (lot 14, 10/10/2026 au soir, `brut/cep_lot14_brasseurs.txt`, avec l'électricité des brasseurs d'air : 10 opérations montent de 0,1 à 1,1 kWhep/m²). La seule opération qui sortait de ±10 % (-38 %) était un collectif à modules thermiques d'appartement (réseau mixte MTA, fiche 16.8) : codée, elle revient à -0 % |
+| Cep | 50 opérations (électricité, gaz, réseaux) | hors production locale : écart médian -0,2 %, écart absolu médian 1,5 %, 50 dans ±10 % ; avec l'autoconsommation photovoltaïque, contre O_Cep_annuel (valeur réglementaire) : écart médian -0,2 %, écart absolu médian 2,1 %, 34 dans ±5 %, 50 dans ±10 % (lot 15, 10/10/2026 au soir, `brut/cep_lot15_vcv.txt`, avec l'électricité des brasseurs d'air et des ventilateurs des ventilo-convecteurs ; l'opération mixte bureaux + logements passe de -7 % à -2 %). La seule opération qui sortait de ±10 % (-38 %) était un collectif à modules thermiques d'appartement (réseau mixte MTA, fiche 16.8) : codée, elle revient à -0 % |
 
 Le bilan du Cep est reproductible avec `python -m banc.cep_lot <dossier de RSEE>`.
 
