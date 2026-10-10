@@ -88,12 +88,15 @@ def comparer(chemin: str, rapide: bool = False):
                         ecs_seule[dps.get(id_dp, 0)] = seule
     # distribution intergroupe (9.8) : demande aux bornes de chaque génération, électricité des réchauffeurs et traceurs, circulateurs
     elec_reseau, circulateurs = {}, {}
+    elec_reseau_h, circulateurs_h = {}, {}
     for id_dp, qw in demandes_dp.items():
         id_gen = dps.get(id_dp, 0)
         r = reseaux[id_dp].heure(qw, cl.te) if id_dp in reseaux else dict(qw_prim=qw, elec_ecs=np.zeros(n), circulateur=np.zeros(n))
         demandes[id_gen] = demandes.get(id_gen, np.zeros(n)) + r["qw_prim"]
         elec_reseau[id_gen] = elec_reseau.get(id_gen, 0.0) + float(r["elec_ecs"].sum())
         circulateurs[id_gen] = circulateurs.get(id_gen, 0.0) + float(r["circulateur"].sum())
+        elec_reseau_h[id_gen] = elec_reseau_h.get(id_gen, np.zeros(n)) + np.asarray(r["elec_ecs"], dtype=float)
+        circulateurs_h[id_gen] = circulateurs_h.get(id_gen, np.zeros(n)) + np.asarray(r["circulateur"], dtype=float)
     resultats = []
     for gen in p.entree.directs("Generation"):
         id_gen = gen.entier("Index")
@@ -112,14 +115,17 @@ def comparer(chemin: str, rapide: bool = False):
         t_depart = ecs_distribution.THETA_2ND                         # θdépart,aval = θdépart_prim-e = max θ2nd-e (1741, 1754, 1763), pas Theta_Wm_Ecs (ECS instantanée, 1010)
         elec = fourni = pertes_sto = gaz = 0.0
         heures = 0
+        elec_h = np.zeros(n)
         seule = ecs_seule[id_gen]
         for h in range(n):
             r = assemblage.heure(float(demandes[id_gen][h]), float(cl.teau[h]), t_depart, float(cl.te[h]), int(cal.case[h]) - 1, bool(seule[h]))
             elec += r["elec"]; fourni += r["fourni"]; pertes_sto += r["pertes"]; gaz += r.get("gaz", 0.0)
+            elec_h[h] = r["elec"]
             heures += r["elec"] > assemblage.nb * 50.0
         resultats.append((id_gen, assemblage, demandes[id_gen].sum(),
                           dict(elec=elec + elec_reseau.get(id_gen, 0.0), fourni=fourni, pertes=pertes_sto, nbh_report=assemblage.ballon.nbh_report, heures=heures,
-                               h_seule=int(seule.sum()), elec_reseau=elec_reseau.get(id_gen, 0.0), circulateur=circulateurs.get(id_gen, 0.0), gaz=gaz)))
+                               h_seule=int(seule.sum()), elec_reseau=elec_reseau.get(id_gen, 0.0), circulateur=circulateurs.get(id_gen, 0.0), gaz=gaz,
+                               elec_h=elec_h + elec_reseau_h.get(id_gen, np.zeros(n)), circulateur_h=circulateurs_h.get(id_gen, np.zeros(n)))))
     return resultats, ref, surface_tot
 
 

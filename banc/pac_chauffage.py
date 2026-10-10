@@ -160,6 +160,7 @@ def comparer(chemin: str):
             gaz = aux = fourni = pertes_reseau = gaz_ecs = 0.0
             report = 0.0
             mois = np.zeros(12)
+            elec_h = np.zeros(n)
             for h in range(n):
                 en_saison = bool(ch_j[min(jours[h], len(ch_j) - 1)])
                 q = (float(qch[id_gen][h]) + report) if en_saison else 0.0
@@ -175,6 +176,7 @@ def comparer(chemin: str):
                 gaz += r.qcef.sum() - r.qcef[:, generateurs.COL[50]].sum()                 # énergies non électriques : gaz, fioul, bois, réseau
                 gaz_ecs += r.qcef[generateurs.ECS, :].sum() - r.qcef[generateurs.ECS, generateurs.COL[50]]
                 aux += r.waux; fourni += r.qfou
+                elec_h[h] += r.waux + r.qcef[:, generateurs.COL[50]].sum()
                 mois[int(cal.mois_civil[h]) - 1] += r.qcef[generateurs.CH, :].sum()
                 report = max(0.0, r.qrest - max(0.0, float(demande_ecs[h]) - (r.qfou - min(r.qfou, q))))   # seul le reste de chauffage est reporté
             surface = sum(x for _, _, x in desservis[id_gen])
@@ -191,7 +193,7 @@ def comparer(chemin: str):
             resultats.append((id_gen, "chaudière " + ch_.famille, dict(sys=0, demande=float(qch[id_gen].sum()) + pertes_reseau, fourni=fourni, elec_pac=aux, elec_joule=0.0,
                                                                      reste=report, heures=0, surface=surface, ref=ref_ch + ref_ecs, gaz=gaz, ref_ecs=ref_ecs, gaz_ecs=gaz_ecs, ref_ch=ref_ch, mois=mois,
                                                                      mois_ref=sum((d["mois_ref"] if d["mois_ref"] is not None and len(d["mois_ref"]) == 12 else np.zeros(12)) * x for _, d, x in desservis[id_gen]),
-                                                                     groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], pertes_reseau=pertes_reseau, waux_reseau=0.0)))
+                                                                     groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], pertes_reseau=pertes_reseau, waux_reseau=0.0, elec_h=elec_h)))
             continue
         pac_noeud = None
         assemblage = None
@@ -212,7 +214,7 @@ def comparer(chemin: str):
                 resultats.append((id_gen, "effet joule", dict(sys=0, demande=float(qch[id_gen].sum()), fourni=float(qch[id_gen].sum()), elec_pac=0.0,
                                                                elec_joule=float(qch[id_gen].sum()), reste=0.0, heures=0, surface=s,
                                                                ref=sum(d["cef_ch_ref"] * x for _, d, x in desservis[id_gen] if d["cef_ch_ref"] == d["cef_ch_ref"]),
-                                                               groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]])))
+                                                               groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], elec_h=np.asarray(qch[id_gen], dtype=float).copy())))
             continue
         try:
             pac = th.Pac.depuis(pac_noeud)
@@ -238,6 +240,7 @@ def comparer(chemin: str):
         elec_pac = elec_joule = fourni = reste = heures = 0.0
         report = 0.0                                                     # énergie non fournie reportée au pas suivant (1015, 1029)
         mois = np.zeros(12)
+        elec_h = np.zeros(n)
         hydraulique = etats_gen.get(id_gen)
         pertes_reseau = waux_reseau = 0.0
         for h in range(n):
@@ -260,13 +263,16 @@ def comparer(chemin: str):
             elec_pac += r["elec"]; fourni += r["fourni"]; heures += r["lr"] > 0
             rest = r["rest"]
             mois[int(cal.mois_civil[h]) - 1] += r["elec"]
+            elec_h[h] += r["elec"]
             for j in joules:
                 rj = j.appeler(rest, generateurs.CH)
                 elec_joule += rj.qcons; rest = rj.qrest
                 mois[int(cal.mois_civil[h]) - 1] += rj.qcons
+                elec_h[h] += rj.qcons
             if appoint_comb is not None and rest > 0:
                 rc = appoint_comb.appeler(0.0, rest, t_wm, t_aval, 20.0 if gen.entier("Pos_Gen", 0) == 1 else float(cl.te[h]), False)
                 gaz_appoint += rc.qcons; elec_pac += rc.waux; rest = rc.qrest
+                elec_h[h] += rc.waux
                 mois[int(cal.mois_civil[h]) - 1] += rc.qcons
             report = rest
         reste = report
@@ -276,7 +282,7 @@ def comparer(chemin: str):
                           dict(sys=sys_ch, demande=float(qch[id_gen].sum()) + pertes_reseau, fourni=fourni, elec_pac=elec_pac, elec_joule=elec_joule, reste=reste, heures=heures,
                                surface=surface, ref=ref, groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], pertes_reseau=pertes_reseau, waux_reseau=waux_reseau,
                                mois=mois, mois_ref=sum((d["mois_ref"] if d["mois_ref"] is not None and len(d["mois_ref"]) == 12 else np.zeros(12)) * x for _, d, x in desservis[id_gen]),
-                               **(dict(gaz=gaz_appoint, gaz_ecs=0.0, ref_ch=ref, ref_ecs=0.0) if appoint_comb is not None else {}))))
+                               elec_h=elec_h, **(dict(gaz=gaz_appoint, gaz_ecs=0.0, ref_ch=ref, ref_ecs=0.0) if appoint_comb is not None else {}))))
     return resultats
 
 

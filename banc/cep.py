@@ -98,7 +98,8 @@ def comparer(chemin: str):
                 sc_g = dataclasses.replace(sc, occupants=sc.occupants * part, apports_occupants=sc.apports_occupants * part,
                                            apports_usages=sc.apports_usages * part, nadeq=sc.nadeq * part)
                 s = sorties.get((bat.entier("Index"), zone.entier("Index"), g.entier("Index")))
-                aux = consommation.puissance_ventilateurs(zone, g, usage, sc_g.ventilation).sum() / 1000 / surface
+                aux_h = consommation.puissance_ventilateurs(zone, g, usage, sc_g.ventilation)
+                aux = aux_h.sum() / 1000 / surface
                 thc = _thc(zone, g, usage, sc_g, cl, union_ch, union_fr, b_tampons)
                 b = groupe.calculer(g, usage, cl, cal, sc_g, b_tampons, aeraulique.du_groupe(zone, g), thc=thc)
                 ecl = b.eclairage.sum() / 1000 / surface
@@ -118,6 +119,7 @@ def comparer(chemin: str):
                                     fr_mois_ref=np.array(s.mensuel("O_Cef_fr_mois")) if s else None, groupe=g.entier("Index"),
                                     bat=bat.entier("Index"), zone_index=zone.entier("Index"), noeud=g, usage=usage,
                                     ch_h=b.chauffage, fr_h=b.refroidissement, theta_i=b.theta_i, saison=b.saison,
+                                    ecl_h=b.eclairage, aux_h=aux_h, mob_h=sc_g.apports_usages,          # Wh par heure (4.7 : mobilier = apports hors occupants)
                                     etats_reseau=b.etats_reseau, recup_reseau=b.recup_reseau, reseaux=thc.reseaux_chaud,
                                     cef_ch_ref=s.nombre("O_Cef_ch_annuel", float("nan")) if s else float("nan"),
                                     cef_fr_ref=s.nombre("O_Cef_fr_annuel", float("nan")) if s else float("nan"))))

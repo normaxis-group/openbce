@@ -87,13 +87,16 @@ def calculer(chemin: str) -> dict:
         s_bat = sum(g["sref"] for z in zones for g in z["groupes"])
         imp = {k: total["postes"][k] / total["sref"] for k in ("ch", "fr", "ecs", "ecl", "aux_vent", "aux_dist")}
         imp["deplacement"] = total["postes"].get("dep", 0.0) / total["sref"]
-        batiments.append(dict(index=bat.entier("Index"), name=bat.texte("Name"), zones=zones,
-                              cep=dict(cef_annuel=sum(imp.values()), cep_annuel=total["cep"], imp=imp,
+        prod_b, ac_b, ac_cep_b = total.get("pv_par_bat", {}).get(bat.entier("Index"), (0.0, 0.0, 0.0))
+        pv_b = dict(prod=prod_b / s_bat, ac=ac_b / s_bat, tac=100.0 * ac_b / prod_b if prod_b > 0 else 0.0, exportee=(prod_b - ac_b) / s_bat) if prod_b > 0 and s_bat > 0 else None
+        batiments.append(dict(index=bat.entier("Index"), name=bat.texte("Name"), zones=zones, pv=pv_b,
+                              cep=dict(cef_annuel=sum(imp.values()), cep_annuel=total["cep"] - 2.3 * ac_cep_b / total["sref"], imp=imp,
                                        par_energie=dict(elec=sum(imp.values()) - total.get("gaz", 0.0), gaz=total.get("gaz", 0.0)))))
     return dict(name=Path(chemin).stem, batiments=batiments, zones_ignorees=zones_ignorees, version=projet.version_moteur, departement=simu.texte("Departement"), altitude=simu.nombre("Altitude"))
 
 
 CHAMPS_COMPARES = (("Sortie_Batiment_B", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_B_Ecl_annuel", "O_Bbio_pts_annuel")),
+                   ("Sortie_Batiment_C", ("O_Eef_Prod_PV_annuel", "O_Eef_Prod_PV_AC_annuel")),
                    ("Sortie_Zone_B", ("O_Bbio_Max",)),
                    ("Sortie_Batiment_C", ("O_Cef_annuel", "O_Cep_annuel", "O_Cef_imp_ch_annuel", "O_Cef_imp_fr_annuel", "O_Cef_imp_ecs_annuel", "O_Cef_imp_ecl_annuel", "O_Cef_imp_auxvent_annuel")),
                    ("Sortie_Groupe_C", ("O_B_Ch_annuel", "O_B_Fr_annuel", "O_Cef_ch_annuel", "O_Cef_ecs_annuel")),

@@ -117,6 +117,7 @@ def comparer(chemin: str):
         demande_ecs = qecs.get(id_gen, np.zeros(n))
         elec = fourni = heures = 0.0
         report = 0.0
+        elec_h = np.zeros(n)
         for h in range(n):
             en_saison = bool(fr_j[min(jours[h], len(fr_j) - 1)])
             rfonct = 0.0
@@ -128,11 +129,12 @@ def comparer(chemin: str):
             r = pac.heure(th.FR, q, float(cl.te[h]), t_aval, rfonct_ecs=rfonct, part_waux0=(1.0 - rfonct) if en_saison else 0.0)
             elec += r["elec"]; fourni += r["fourni"]; heures += r["lr"] > 0
             report = r["rest"]
+            elec_h[h] = r["elec"]
         surface = sum(s for _, _, s in desservis[id_gen])
         ref = sum(d["cef_fr_ref"] * s for _, d, s in desservis[id_gen] if d["cef_fr_ref"] == d["cef_fr_ref"])
         resultats.append((id_gen, pac_noeud.nom.replace("Source_Ballon_Base_Thermodynamique_Elec_", "ballon ").replace("Generateur_Thermodynamique_Elec_", "PAC "),
                           dict(sys=sys_fr, demande=float(qfr[id_gen].sum()), fourni=fourni, elec=elec, heures=heures, surface=surface, ref=ref, report=report,
-                               groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]])))
+                               groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], elec_h=elec_h)))
     return resultats
 
 

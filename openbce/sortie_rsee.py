@@ -190,6 +190,12 @@ def construire(calcul: dict, version: str = "", departement: str = "", altitude:
             v = (cep.get("par_energie") or {}).get(energie)
             if v is not None:
                 _val(ec, f"O_Cef_{energie}_imp_annuel", round(float(v), 1))
+        pv = bat.get("pv")
+        if pv:
+            _val(ec, "O_Eef_Prod_PV_annuel", round(float(pv["prod"]), 1))
+            _val(ec, "O_Eef_Prod_PV_AC_annuel", round(float(pv["ac"]), 1))
+            _val(ec, "O_TAC_elec_PV_annuel", round(float(pv["tac"]), 1))
+            _val(ec, "O_Eef_Elec_Exportee_annuel", round(float(pv["exportee"]), 1))
         zc = ET.SubElement(ec, "Sortie_Zone_C_Collection")
         for z in bat["zones"]:
             ez = ET.SubElement(zc, "Sortie_Zone_C")

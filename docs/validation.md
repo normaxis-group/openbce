@@ -80,6 +80,7 @@ Ces écarts sont détaillés dans le tableau ci-dessous et dans les commentaires
 | Confort d'été (DH, mode Th-DC) | en cours | `groupe.calculer(thd=...)`, `banc.confort` : 12 groupes de 8 projets, écart médian nul, écart absolu médian 77 °C.h, 8 dans ±10 % |
 | Bbio_max, Cep,nr_max, Cep_max, DH_max (annexe R. 172-4) | fait pour les usages 1 à 5 | `exigences.py` ; `banc.exigences` sur les RSEE du lot (Mbgeo juste sur 732 groupes, DH_max sur 761) ; `banc.opee_exigences` sur les données ouvertes de l'observatoire OPEE (113 016 zones, août 2026) : Mbgeo et Mcgeo 100 %, Bbio_maxmoyen, Cep,nr_maxmoyen et Cep_maxmoyen retrouvés à 100 % (99,8 % en collectif), Mbsurf_tot et Mcsurf_tot 100 % en enseignement, DH_max 100 % ; usages 6 à 28 : tables lues dans le texte, aucun RSEE déposé avant août 2026 |
 | Consommations (Cep) | en cours | voir ci-dessous ; spécifications du lot 2 dans `specs/` |
+| Production photovoltaïque (fiches 12.1 à 12.4) | fait | `photovoltaique.py`, `banc.pv` : 17 bâtiments de 11 opérations, rapport calcul/RSEE médian 1,002, 15 dans ±2,1 % ; deux toitures ouest et nord à face arrière confinée à +11 %, cause non trouvée (`brut/pv_lot1.txt`) ; autoconsommation (13.4, minimum horaire par bâtiment de la production et de la consommation électrique tous usages) : part autoconsommée 2,29/2,28 et 5,00/4,98 kWh/m² sur deux opérations à plusieurs bâtiments |
 | Carbone | à faire | - |
 
 Mesure faite sur un fichier par projet (46 projets de logement). Les valeurs que le texte réglementaire ne donne pas

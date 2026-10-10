@@ -42,7 +42,9 @@ def calculer_rsee(chemin_entree: Path, chemin_sortie: Path) -> dict:
         sref = sum(g["sref"] for g in groupes) or 1.0
         bbio = sum(g["sref"] * (2 * sum(g["b_ch_mois"]) + 2 * sum(g["b_fr_mois"]) + 5 * sum(g["b_ecl_mois"])) for g in groupes) / sref
         dh = max((g["dh"] or 0.0) for g in groupes) if groupes else 0.0
+        pv = bat.get("pv")
         resume.append(dict(batiment=bat["name"], sref=round(sref, 1), bbio_pts=round(bbio, 1), cep=round(bat["cep"]["cep_annuel"], 1),
+                           pv_production=round(pv["prod"], 2) if pv else 0.0, pv_autoconsommee=round(pv["ac"], 2) if pv else 0.0,
                            cef=round(bat["cep"]["cef_annuel"], 1), dh_max_groupes=round(dh, 0),
                            bbio_max=[round(z["bbio_max"]["bbio_max"], 1) for z in bat["zones"] if z.get("bbio_max")]))
     from openbce import usages as mod_usages
