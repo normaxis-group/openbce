@@ -95,6 +95,9 @@ class ThC:
     # ventilateurs locaux des émetteurs à recyclage d'air (8.1, 811 à 813) : électricité dans Besoins.ventilateurs_locaux_w
     ventilateurs_locaux: list = ()
     surface: float = 0.0
+    # pertes récupérables des stockages, générations et distributions d'ECS (11.1) : série horaire, Wh, déjà réduite de la
+    # part récupérable (0,6) et répartie sur le groupe ; injectée au pas suivant, moitié convective, moitié radiative
+    gains_recup: object = None
 
 
 @dataclass
@@ -239,8 +242,9 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
             becl[h], einat[h] = eclairage.consommation_tertiaire_saisie(flt1, flt2, flt3, sc.eclairage[h], surface, locaux_ecl)   # (788)
         else:
             becl[h], einat[h] = eclairage.consommation_tertiaire(flt1, flt2, flt3, sc.eclairage[h], surface, locaux_ecl)   # (788)
-        conv = conv_interne[h] + eclairage.PART_CONVECTIVE * becl[h] + 0.5 * recup_prec     # (11.1) pertes de réseau de h-1
-        rad = rad_interne[h] + (1 - eclairage.PART_CONVECTIVE) * becl[h] + 0.5 * recup_prec
+        recup_ecs = float(thc.gains_recup[h - 1]) if (thc and thc.gains_recup is not None and h > 0) else 0.0   # (11.1) pertes d'ECS récupérables, pas précédent
+        conv = conv_interne[h] + eclairage.PART_CONVECTIVE * becl[h] + 0.5 * (recup_prec + recup_ecs)     # (11.1) pertes de réseau de h-1
+        rad = rad_interne[h] + (1 - eclairage.PART_CONVECTIVE) * becl[h] + 0.5 * (recup_prec + recup_ecs)
         te = climat.te[h]
         q = q_occ if sc.ventilation[h] > 0 else q_inocc
         k_t = min(max((ti_fin - T_INTERIEURES[0]) / PAS_T, 0.0), len(T_INTERIEURES) - 1.001)

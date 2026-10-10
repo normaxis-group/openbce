@@ -75,6 +75,53 @@ def generateurs_chauffage(projet, groupe) -> set[str]:
     return {c.nom for i in ids if i in gens for c in gens[i].enfants if c.nom.startswith(("Generateur", "Production"))}
 
 
+# Pertes récupérables des ballons et distributions d'ECS en apports du Th-C (fiche 11.1, part 0,6) : codées, mais inactives par
+# défaut. Mesure du 10/10 au soir (brut/thc_recup_ecs*.txt, lot 18) : elles ramènent les opérations à T.ONE triple service de
+# +10/+17 % à ±5 % de besoin de chauffage, mais poussent à -10/-24 % les opérations à chauffe-eau thermodynamiques et panneaux
+# rayonnants qui étaient exactes (cas 25, cas 30, cas 31, cas 28) ; au lot, l'écart absolu médian de Cep passe de 1,4 à 2,7 %.
+# La référence ne récupère donc pas ces pertes, ou pas ainsi ; à trancher par une variante Pleiades (ballon en volume chauffé
+# puis hors volume, même projet).
+RECUP_ECS = False
+PART_RECUP_DEC_ECS = 0.6        # fiche 11.1 : part récupérable des pertes des stockages décentralisés d'ECS en volume chauffé
+PART_RECUP_DIST_ECS = 0.6       # fiche 11.1 : part récupérable des pertes des distributions d'ECS en volume chauffé
+
+
+def gains_recuperables_ecs(p, chemin: str, n: int) -> dict:
+    """Pertes récupérables d'ECS par groupe (clé (bâtiment, zone, groupe)), Wh par heure (11.1) : pertes des ballons des
+    générations en volume chauffé (Pos_Gen 1), réparties entre les groupes desservis au prorata des surfaces, fois 0,6 ;
+    pertes de distribution d'ECS du groupe (9.7, air à 20 °C) fois 0,6. Simulation rapide des ballons (banc.ecs_cef)."""
+    from banc import ecs_cef
+    try:
+        resultats, _, _ = ecs_cef.comparer(chemin, rapide=True)
+    except Exception:
+        resultats = []
+    pertes_gen = {id_gen: r["pertes_h"] for id_gen, _, _, r in resultats if r is not None and r.get("pos_gen", 0) == 1 and r.get("pertes_h") is not None}
+    dps = {d.entier("Index"): d.entier("Id_Gen") for d in p.entree.tous("Distribution_Intergroupe_ECS")}
+    for m in p.entree.tous("T5_Cardonnel_ModuleAppartement_Mixte"):
+        dps[m.entier("Index")] = m.entier("Id_Gen", 0)
+    gens_ballon = [g.entier("Index") for g in p.entree.directs("Generation") if g.directs("Production_Stockage")]
+    desservis, surfaces = {}, {}
+    for bat in p.entree.directs("Batiment"):
+        for zone in bat.directs("Zone"):
+            usage = zone.entier("Usage")
+            for g in zone.directs("Groupe"):
+                s = g.nombre("SHAB" if usage in (1, 2) else "SU")
+                cle = (bat.entier("Index"), zone.entier("Index"), g.entier("Index"))
+                for em in g.directs("Emetteur_ECS"):
+                    for ds in em.directs("Distribution_Groupe_ECS"):
+                        id_gen = dps.get(ds.entier("Id_Dist_Primaire", 0), gens_ballon[0] if len(gens_ballon) == 1 else 0)
+                        desservis.setdefault(id_gen, {})[cle] = desservis.get(id_gen, {}).get(cle, 0.0) + s * em.nombre("Rat_em_e", 1.0)
+    gains = {}
+    for id_gen, groupes_gen in desservis.items():
+        serie = pertes_gen.get(id_gen)
+        if serie is None:
+            continue
+        total = sum(groupes_gen.values()) or 1.0
+        for cle, s in groupes_gen.items():
+            gains[cle] = gains.get(cle, np.zeros(n)) + PART_RECUP_DEC_ECS * np.asarray(serie, dtype=float) * (s / total)
+    return gains
+
+
 def comparer(chemin: str):
     projet = rsee.lire(chemin)
     simu = projet.entree.un("Simu")
@@ -83,6 +130,7 @@ def comparer(chemin: str):
     sorties = {(b.entier("Index"), z.entier("Index"), g.entier("Index")): g
                for b in projet.sortie.tous("Sortie_Batiment_C") for z in b.tous("Sortie_Zone_C") for g in z.tous("Sortie_Groupe_C")}
     lignes = []
+    gains_ecs = gains_recuperables_ecs(projet, chemin, len(cl.te)) if RECUP_ECS else {}
     for bat in projet.entree.directs("Batiment"):
         b_tampons = enveloppe.coefficients_b(bat)
         union_ch, union_fr = saisons_batiment(bat, cl, cal, b_tampons)
@@ -101,6 +149,15 @@ def comparer(chemin: str):
                                            apports_usages=sc.apports_usages * part, nadeq=sc.nadeq * part)
                 s = sorties.get((bat.entier("Index"), zone.entier("Index"), g.entier("Index")))
                 thc = _thc(zone, g, usage, sc_g, cl, union_ch, union_fr, b_tampons)
+                if RECUP_ECS:
+                    cle_g = (bat.entier("Index"), zone.entier("Index"), g.entier("Index"))
+                    recup = np.array(gains_ecs.get(cle_g, np.zeros(len(cl.te))), dtype=float)
+                    try:
+                        qw0 = ecs.besoins(g, usage, cal, cl.teau)
+                        recup = recup + PART_RECUP_DIST_ECS * ecs_distribution.pertes(ecs_distribution.troncons(g, usage, surface), qw0, np.full(len(cl.te), 20.0), cl.te)
+                    except NotImplementedError:
+                        pass
+                    thc = dataclasses.replace(thc, gains_recup=recup)
                 b = groupe.calculer(g, usage, cl, cal, sc_g, b_tampons, aeraulique.du_groupe(zone, g), thc=thc)
                 aux_h = consommation.puissance_ventilateurs(zone, g, usage, sc_g.ventilation)
                 if b.brasseurs_w is not None:                                         # brasseurs d'air (8.32) : avec les auxiliaires de ventilation

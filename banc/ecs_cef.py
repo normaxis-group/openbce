@@ -123,16 +123,18 @@ def comparer(chemin: str, rapide: bool = False):
         elec = fourni = pertes_sto = gaz = 0.0
         heures = 0
         elec_h = np.zeros(n)
+        pertes_h = np.zeros(n)
         seule = ecs_seule[id_gen]
         for h in range(n):
             r = assemblage.heure(float(demandes[id_gen][h]), float(cl.teau[h]), t_depart, float(cl.te[h]), int(cal.case[h]) - 1, bool(seule[h]))
             elec += r["elec"]; fourni += r["fourni"]; pertes_sto += r["pertes"]; gaz += r.get("gaz", 0.0)
-            elec_h[h] = r["elec"]
+            elec_h[h] = r["elec"]; pertes_h[h] = r["pertes"]
             heures += r["elec"] > assemblage.nb * 50.0
         resultats.append((id_gen, assemblage, demandes[id_gen].sum(),
                           dict(elec=elec + elec_reseau.get(id_gen, 0.0), fourni=fourni, pertes=pertes_sto, nbh_report=assemblage.ballon.nbh_report, heures=heures,
                                h_seule=int(seule.sum()), elec_reseau=elec_reseau.get(id_gen, 0.0), circulateur=circulateurs.get(id_gen, 0.0), gaz=gaz,
-                               elec_h=elec_h + elec_reseau_h.get(id_gen, np.zeros(n)), circulateur_h=circulateurs_h.get(id_gen, np.zeros(n)))))
+                               elec_h=elec_h + elec_reseau_h.get(id_gen, np.zeros(n)), circulateur_h=circulateurs_h.get(id_gen, np.zeros(n)),
+                               pertes_h=pertes_h, pos_gen=gen.entier("Pos_Gen", 0))))
     return resultats, ref, surface_tot
 
 

@@ -63,7 +63,12 @@ class EmetteurEquivalent:
 # qu'on leur applique 0,2 à 0,4 K. Lecture retenue : la correction θvt n'est appliquée que pour le statut 2 (valeur
 # par défaut), avec la valeur écrite ; θvs n'est pas appliqué (bureaux : +1 % sans, +34 % avec le 1,8 saisi).
 VT_SAISIE_SEULE = True
-VT_TOUS_STATUTS = False       # essai : la valeur saisie est appliquée quel que soit le statut (pas seulement 2)
+# Options d'étude (10/10 au soir, lots 16 et 18 : aucune n'améliore le lot, règle du 08/10 gardée) : VT_TOUS_STATUTS applique
+# la valeur saisie quel que soit le statut (les zones chauffées par des splits à 1,4 K en statut 0 le demandent : cas 32,
+# cas 33, cas 34, cas 35 à -12/-14 % sans, ±4 % avec ; mais les panneaux rayonnants à 0,2/0,5 K en statut 0 montent de 2 à 3
+# points de Cep) ; VT_STATUT0_TYPO1_SEUL restreint cette application aux émetteurs à air (typologie 1). Voir docs/validation.md.
+VT_TOUS_STATUTS = False
+VT_STATUT0_TYPO1_SEUL = False
 VS_IGNORE = True
 
 
@@ -72,7 +77,11 @@ def _vt(e: Noeud, chaud: bool) -> float:
     statut = e.entier("Statut_Variation_Temporelle_Chaud" if chaud else "Statut_Variation_Temporelle_Froid", 0)
     saisie = e.nombre(cle, 0.0)
     if VT_SAISIE_SEULE:
-        return saisie if (statut == 2 or VT_TOUS_STATUTS) else 0.0
+        if statut == 2:
+            return saisie
+        if VT_TOUS_STATUTS and (not VT_STATUT0_TYPO1_SEUL or e.entier("Typologie_Emetteur_Chaud" if chaud else "Typologie_Emetteur_Froid", 0) == 1):
+            return saisie
+        return 0.0
     if saisie:
         return saisie + (0.5 if statut == 2 else 0.0) * (1 if chaud else -1)      # valeur justifiée : + 0,5 K
     arret = e.entier("Couple_Regulateur_Emetteur_Chaud" if chaud else "Couple_Regulateur_Emetteur_Froid", 0)
