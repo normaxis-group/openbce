@@ -57,9 +57,12 @@ def ic_energie(imports: dict[tuple[str, str], float]) -> dict:
     return dict(ic_energie=sum(detail.values()), ic_energie_annuel=annuel, detail=detail, energies_ignorees=sorted(set(ignores)))
 
 
-# Ic énergie_maxmoyen, kg CO2 eq/m², par usage : (permis 2022 à 2024, 2025 à 2027, 2028 et après), selon le raccordement à un
-# réseau de chaleur urbain (annexe de l'article R. 172-4, chapitre II, p. 29 et 30). Usages 4 et 5 : enseignement primaire
-# ou secondaire. Les autres usages n'ont pas de seuil Ic énergie dans le texte disponible.
+# Ic énergie_maxmoyen, kg CO2 eq/m², par usage : (permis 2022 à 2024, 2025 à 2027, 2028 et après), colonne « raccordé à un
+# réseau de chaleur urbain » puis « autres cas » (annexe de l'article R. 172-4, chapitre II, p. 29 et 30). Usages 4 et 5 :
+# enseignement primaire ou secondaire ; les autres usages n'ont pas de seuil Ic énergie dans le texte disponible. Sur les
+# 113 016 zones de l'observatoire OPEE, la colonne « autres cas » est retrouvée à 97 à 99,5 % même pour les zones déclarées
+# raccordées à un réseau urbain (maisons 160, bureaux 200) : la colonne « réseau » ne s'applique qu'à un réseau classé
+# (L. 712-1), que le RSEE ne distingue pas ; elle n'est utilisée que sur demande explicite (`reseau_chaleur=True`).
 IC_ENERGIE_MAX_MOYEN = {1: ((200, 200, 160), (160, 160, 160)), 2: ((560, 320, 260), (560, 260, 260)), 3: ((280, 200, 200), (200, 200, 200)),
                         4: ((240, 200, 140), (240, 140, 140)), 5: ((240, 200, 140), (240, 140, 140))}
 IC_ENERGIE_MAX_MAISON_GAZ = 280.0                   # maisons : permis avant le 31/12/2023 sur une parcelle prévue pour le gaz (p. 30)

@@ -17,7 +17,7 @@ import csv
 import statistics
 import sys
 
-from openbce import exigences
+from openbce import carbone, exigences
 
 ALTITUDE = {"0 à 400m": 200.0, "400 à 800m": 600.0, "> à 800m": 1000.0}
 TOL = 0.0051
@@ -91,6 +91,15 @@ def main(zone_csv: str, projet_csv: str) -> None:
             v = exigences.mcsurf_tot(u, s, an, r.get("is_reseau_urbain") == "true")
             test(u, "Mcsurf_tot", abs(v - mc["mcsurf_tot"]) <= TOL, f"S {s:.0f} m², permis {an} : OPEE {mc['mcsurf_tot']}, calculé {v:.3f}")
         bbio_max, cep_max, cep_nr_max = _f(r.get("bbio_max")), _f(r.get("cep_max")), _f(r.get("cep_nr_max"))
+        ic_max, ic_moyen = _f(r.get("ic_energie_max")), _f(r.get("ic_energie_maxmoyen"))
+        if ic_moyen:
+            rcu, derog = False, r.get("is_derogation_icenergie") == "true"      # colonne « réseau » du texte = réseau classé, non distingué dans l'OPEE
+            attendu = carbone.ic_energie_max_moyen(u, an, rcu, derog)
+            bases[u]["Icénergie_maxmoyen"].append(ic_moyen)
+            test(u, "Icénergie_maxmoyen", attendu is not None and abs(ic_moyen / attendu - 1) <= 0.005, f"permis {an}, RCU {rcu}, dérogation {derog} : OPEE {ic_moyen:.0f}, calculé {attendu}")
+            if ic_max and cep_max:
+                f_ic, f_cep = ic_max / ic_moyen, cep_max / exigences.CEP_MAX_MOYEN[u]
+                test(u, "Icénergie_max : facteur", abs(f_ic / f_cep - 1) <= 0.005, f"facteur Ic {f_ic:.4f}, facteur Cep {f_cep:.4f}")
         if bbio_max and all(x is not None for x in mb.values()):
             base = bbio_max / (1 + sum(mb.values()))
             bases[u]["Bbio_maxmoyen"].append(base)

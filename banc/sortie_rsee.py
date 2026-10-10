@@ -99,12 +99,16 @@ def calculer(chemin: str) -> dict:
         imports = {("elec", k): max(v, 0.0) * reduc for k, v in elec_postes.items()}
         imports[("gaz", "ch")], imports[("gaz", "ecs")] = gaz_ch_b, gaz_ecs_b
         ic = carbone.ic_energie(imports)
-        ic_max = None
-        if zones:
-            z0, g0 = zones[0], bat.directs("Zone")[0].directs("Groupe")[0]
-            m = exigences.cep_max(z0["usage"], zone_clim, simu.nombre("Altitude"), sum(g["sref"] for g in z0["groupes"]), z0["nb_logements"], sref_usage[z0["usage"]],
-                                  g0.entier("Categorie_CE", 1), annee)
-            ic_max = carbone.ic_energie_max(z0["usage"], 1 + m["mcgeo"] + m["mccombles"] + m["mcsurf_moy"] + m["mcsurf_tot"] + m["mccat"], annee)
+        # seuil du bâtiment : moyenne des seuils de zone pondérée par les surfaces (retrouve l'ic_energie_max des RSEnv à 0,1 %)
+        ic_max, s_ic = 0.0, 0.0
+        for z, zn in zip(zones, bat.directs("Zone")):
+            sz = sum(g["sref"] for g in z["groupes"])
+            m = exigences.cep_max(z["usage"], zone_clim, simu.nombre("Altitude"), sz, z["nb_logements"], sref_usage[z["usage"]], zn.directs("Groupe")[0].entier("Categorie_CE", 1), annee)
+            v = carbone.ic_energie_max(z["usage"], 1 + m["mcgeo"] + m["mccombles"] + m["mcsurf_moy"] + m["mcsurf_tot"] + m["mccat"], annee)
+            z["ic_energie_max"] = v
+            if v is not None and sz > 0:
+                ic_max += v * sz; s_ic += sz
+        ic_max = ic_max / s_ic if s_ic > 0 else None
         batiments.append(dict(index=bat.entier("Index"), name=bat.texte("Name"), zones=zones, pv=pv_b,
                               ic_energie=dict(ic_energie=ic["ic_energie"], ic_energie_annuel=ic["ic_energie_annuel"], ic_energie_max=ic_max, energies_ignorees=ic["energies_ignorees"]),
                               cep=dict(cef_annuel=sum(imp.values()), cep_annuel=total["cep"] - 2.3 * ac_cep_b / total["sref"], imp=imp,
