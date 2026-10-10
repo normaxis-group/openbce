@@ -38,14 +38,14 @@ Il sert à relire et contrôler un calcul réglementaire, à étudier la sensibi
 - Couvre le logement individuel et collectif, les bureaux, l'effet joule, les PAC électriques à source air, les
   chaudières gaz et fioul, les réseaux de chaleur et de froid, les ballons et chauffe-eau thermodynamiques, la
   ventilation simple et double flux, l'éclairage, les ascenseurs et parkings, la production photovoltaïque et son
-  autoconsommation.
+  autoconsommation, les réseaux mixtes à modules thermiques d'appartement (MTA, fiche 16.8).
 - Calcule les 28 usages de la méthode (scénarios, débits conventionnels, éclairage par type de local, besoins d'ECS,
   seuils Bbio_max, Cep_max et DH_max). Seuls les usages 1 à 3 (maisons, logements collectifs, bureaux) sont validés
   contre des récapitulatifs de référence ; les usages 4 à 28 sont codés d'après le texte de l'annexe III
   ([specs/usages/](specs/usages/)) et tout résultat qui en contient porte un avertissement (`usages_non_valides`,
   `avertissement` dans le résumé de l'API et du serveur MCP).
 - Ne couvre pas encore : indicateurs carbone (Ic), solaire thermique, espaces tampons, ventilation naturelle et puits
-  climatiques, PAC à sources eau et sol, bois et cogénération, systèmes sous Titre V.
+  climatiques, PAC à sources eau et sol, bois et cogénération, autres systèmes sous Titre V.
 
 Résultats de validation au 10/10/2026, sur 50 opérations réelles : Cep (production photovoltaïque comprise) à -0,1 % en
 médiane, écart absolu médian 2,4 %, 49 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones ;

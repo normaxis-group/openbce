@@ -18,7 +18,7 @@ import numpy as np
 
 from banc.besoins import METEO, zone_climatique
 from banc.cep import comparer as cep_comparer
-from openbce import calendrier, chaudiere, climat, distribution, ecs, ecs_distribution, enveloppe, generateurs, generateurs_ballon, meteo, reseau_fourniture, rsee, thermodynamique as th
+from openbce import calendrier, chaudiere, climat, distribution, ecs, ecs_distribution, enveloppe, generateurs, generateurs_ballon, meteo, mta, reseau_fourniture, rsee, thermodynamique as th
 
 
 # Récupération des pertes de réseau (11.1) dans ce banc sans rebouclage thermique : « net » = besoin diminué des pertes
@@ -53,12 +53,17 @@ def comparer(chemin: str):
     groupes = {(d["bat"], d["zone_index"], d["groupe"]): (d, surface) for *_, surface, _a, _ar, _e, _er, _ch, _chr, _fr, _frr, _e1, _e2, _e3, d in lignes}
     gens = {g.entier("Index"): g for g in p.entree.directs("Generation")}
     dch = {d.entier("Index"): d.entier("Id_Gen") for d in p.entree.tous("Distribution_Intergroupe_Chaud")}
+    mtas = {m.entier("Index"): m for m in p.entree.tous("T5_Cardonnel_ModuleAppartement_Mixte")}      # réseaux mixtes MTA (16.8)
+    for i, m in mtas.items():
+        dch[i] = m.entier("Id_Gen", 0)
     # RSEE dont certains réseaux intergroupes manquent (cas 15 : Id_Dist_1re 3 absent) : rattachés à l'unique génération à ballon
     _gens_ballon = [g.entier("Index") for g in p.entree.directs("Generation") if g.directs("Production_Stockage")]
     _ids_dist = {x.entier("Id_Dist_1re", 0) for g in p.entree.tous("Groupe") for em in g.directs("Emetteur") for x in em.tous("Distribution_Groupe_Chaud")}
     if len(_gens_ballon) == 1 and any(i not in dch for i in _ids_dist if i):
         dch = _Defaut(dch, _gens_ballon[0])
     decs = {d.entier("Index"): d.entier("Id_Gen") for d in p.entree.tous("Distribution_Intergroupe_ECS")}
+    for i, m in mtas.items():
+        decs[i] = m.entier("Id_Gen", 0)
     # RSEE sans nœud Distribution_Intergroupe_ECS (cas 15) : les émetteurs ECS sont rattachés à l'unique génération à ballon
     _gens_ballon = [g.entier("Index") for g in p.entree.directs("Generation") if g.directs("Production_Stockage")]
     if not decs and len(_gens_ballon) == 1:
@@ -112,9 +117,23 @@ def comparer(chemin: str):
     # réseau intergroupes de chaque génération ; la génération fournit le besoin net plus les pertes brutes des réseaux
     # du groupe et du réseau intergroupes, moins la part récupérée de ce dernier (60 %, non rebouclée).
     etats_gen = {}
+    etats_mta = {}                                                   # génération -> états horaires des réseaux de groupe d'un réseau mixte MTA
     for id_gen, hyd in reseaux_gen.items():
         dp = next((dp_ch[k] for *_, k in hyd if k in dp_ch), None)
         if dp is None:
+            if any(k in mtas for *_, k in hyd):
+                liste = []
+                for h in range(n):
+                    etats = []
+                    for r, part, d, _ in hyd:
+                        src = d.get("etats_reseau")
+                        if src is not None and d.get("reseaux"):
+                            idx = next((i for i, (rr, _p) in enumerate(d["reseaux"]) if rr == r), None)
+                            etats.append(src[h][idx] if idx is not None else distribution.EtatReseau())
+                        else:
+                            etats.append(distribution.reseau_groupe(r, float(d["ch_h"][h]) * part, float(d["theta_i"][h]) if d["theta_i"] is not None else 20.0, float(cl.te[h]), cl.base_ext))
+                    liste.append(etats)
+                etats_mta[id_gen] = liste
             continue
         qnom_dp, qresid_dp = sum(r.qnom for r, *_ in hyd), sum(r.qresid for r, *_ in hyd)
         liste = []
@@ -260,6 +279,79 @@ def comparer(chemin: str):
         appoint_comb = next((chaudiere.Chaudiere.depuis(c, gen.entier("Pos_Gen", 0)) for ps in gen.directs("Production_Stockage") for c in ps.enfants
                              if c.nom == "Source_Ballon_Appoint_Combustion" and c.entier("Id_Fou_Gen_1", 3) in (1, 4)), None)
         gaz_appoint = 0.0
+        mta_noeud = next((m for m in mtas.values() if m.entier("Id_Gen", 0) == id_gen), None)
+        if mta_noeud is not None:
+            # Réseau intergroupe mixte à modules thermiques d'appartement (16.8) : chaque heure, besoins d'ECS des groupes,
+            # chauffage direct des réseaux de groupe, maintien de l'échangeur ECS et pertes des modules et du primaire
+            # forment une seule demande à la température moyenne du primaire (2812). Avec un besoin de chauffage elle va
+            # au mode chauffage (PAC puis appoint à combustion), sinon au mode ECS (PAC en matrice ECS puis appoint),
+            # p. 1525 ; le ballon de la génération n'est pas simulé (le primaire est servi à 75 °C, au-dessus de sa
+            # consigne de 55 °C). Les auxiliaires du primaire et des cartes des modules sont comptés avec l'électricité.
+            try:
+                mod = mta.ModulesMixtes.depuis(mta_noeud, b_tampons)
+            except NotImplementedError as e:
+                resultats.append((id_gen, f"non traité : {e}", None))
+                continue
+            etats_h = etats_mta.get(id_gen)
+            demande_ecs = qecs.get(id_gen, np.zeros(n))
+            amb = 20.0 if gen.entier("Pos_Gen", 0) == 1 else None
+            elec_ch = elec_ecs = gaz_ch = gaz_ecs = fourni = waux_reseau = pertes_reseau = 0.0
+            heures = 0
+            report = 0.0
+            mois = np.zeros(12)
+            elec_h = np.zeros(n)
+            q_ch_tot = q_ecs_tot = 0.0
+            for h in range(n):
+                etats = etats_h[h] if etats_h else []
+                rm = mod.heure(float(demande_ecs[h]), ecs_distribution.THETA_2ND, float(cl.teau[h]), etats, float(cl.te[h]))
+                q = rm["qsys"] + report
+                t_aval = rm["theta_aval"]
+                waux_reseau += rm["waux"]; pertes_reseau += rm["pertes"]
+                q_ch_tot += rm["q_ch"]; q_ecs_tot += rm["q_ecs"]
+                elec_h[h] += rm["waux"]
+                if rm["chauffage"]:
+                    r = pac.heure(th.CH, q, float(cl.te[h]), t_aval)
+                    elec, fou, rest = r["elec"], r["fourni"], r["rest"]
+                    heures += r["lr"] > 0
+                    g = 0.0
+                    if appoint_comb is not None and rest > 0:
+                        rc = appoint_comb.appeler(0.0, rest, t_aval, t_aval, amb if amb is not None else float(cl.te[h]), False)
+                        g += rc.qcons; elec += rc.waux; fou += rest - rc.qrest; rest = rc.qrest
+                    elec_ch += elec + rm["waux"]; gaz_ch += g
+                    mois[int(cal.mois_civil[h]) - 1] += elec + g
+                    if assemblage is not None:                                     # le ballon reste en veille (pertes, réchauffage)
+                        ra = assemblage.heure(0.0, float(cl.teau[h]), ecs_distribution.THETA_2ND, float(cl.te[h]), int(cal.case[h]) - 1, False)
+                        elec_ch += ra["elec"]; gaz_ch += ra.get("gaz", 0.0); elec_h[h] += ra["elec"]
+                else:
+                    # mode ECS : la demande du primaire est servie par le ballon de la génération (base PAC, appoint à combustion)
+                    elec = g = fou = 0.0
+                    rest = q
+                    if assemblage is not None:
+                        ra = assemblage.heure(q, float(cl.teau[h]), ecs_distribution.THETA_2ND, float(cl.te[h]), int(cal.case[h]) - 1, True)
+                        elec, g, fou = ra["elec"], ra.get("gaz", 0.0), ra["fourni"]
+                        rest = 0.0                                                 # le ballon reporte lui-même ce qu'il n'a pas fourni
+                        heures += ra["elec"] > assemblage.nb * 50.0
+                    elec_ecs += elec + rm["waux"]; gaz_ecs += g
+                elec_h[h] += elec
+                fourni += fou
+                report = max(rest, 0.0)
+            surface = sum(x for _, _, x in desservis[id_gen])
+            ref_ch = sum(d["cef_ch_ref"] * x for _, d, x in desservis[id_gen] if d["cef_ch_ref"] == d["cef_ch_ref"])
+            ref_ecs = 0.0
+            for c, (d, surf) in groupes.items():
+                if c not in sorties:
+                    continue
+                for em in d["noeud"].directs("Emetteur_ECS"):
+                    for ds in em.directs("Distribution_Groupe_ECS"):
+                        if decs.get(ds.entier("Id_Dist_Primaire", 0), 0) == id_gen:
+                            ref_ecs += sorties[c].nombre("O_Cef_ecs_annuel", 0.0) * surf * em.nombre("Rat_em_e", 1.0)
+            resultats.append((id_gen, "réseau mixte MTA (16.8) sur " + pac_noeud.nom.replace("Source_Ballon_Base_Thermodynamique_Elec_", "ballon ").replace("Generateur_Thermodynamique_Elec_", "PAC "),
+                              dict(sys=pac.modes[th.CH].sys, demande=q_ch_tot + q_ecs_tot + pertes_reseau, fourni=fourni, elec_pac=elec_ch + elec_ecs, elec_joule=0.0, elec_ecs=elec_ecs,
+                                   reste=report, heures=heures, surface=surface, ref=ref_ch + ref_ecs, ref_ch=ref_ch, ref_ecs=ref_ecs, gaz=gaz_ch + gaz_ecs, gaz_ecs=gaz_ecs,
+                                   groupes=[d["zone_index"] for _, d, _ in desservis[id_gen]], pertes_reseau=pertes_reseau, waux_reseau=waux_reseau, mois=mois,
+                                   mois_ref=sum((d["mois_ref"] if d["mois_ref"] is not None and len(d["mois_ref"]) == 12 else np.zeros(12)) * x for _, d, x in desservis[id_gen]),
+                                   elec_h=elec_h, mta=dict(q_ch=q_ch_tot, q_ecs=q_ecs_tot, elec_ch=elec_ch, gaz_ch=gaz_ch))))
+            continue
         sys_ch = pac.modes[th.CH].sys
         # réseau hydraulique (sys 1) : Theta_Wm_Ch si gestion à température constante, sinon moyenne de dimensionnement des
         # réseaux desservis (premier jet : pas de loi d'eau, θmoy_dp(h) de la fiche 8.11 viendra avec la distribution)
@@ -331,7 +423,8 @@ if __name__ == "__main__":
         if "gaz" in r:
             print(f"génération {id_gen} : {nom} | zones {r['groupes']} | demande ch {r['demande'] / 1000:6.0f} kWh (dont pertes réseaux {r['pertes_reseau'] / 1000:.0f}) | fournie ch+ECS {r['fourni'] / 1000:6.0f}"
                   f" | gaz ch {(r['gaz'] - r['gaz_ecs']) / 1000 / s:5.2f} / RSEE ch {r['ref_ch'] / s:5.2f} ; gaz ECS {r['gaz_ecs'] / 1000 / s:5.2f} / RSEE ECS {r['ref_ecs'] / s:5.2f} ; aux élec {r['elec_pac'] / 1000 / s:4.2f} kWh/m²"
-                  f" | total ({(r['gaz'] + r['elec_pac']) / 1000 / r['ref'] - 1:+.0%}) | report final {r['reste'] / 1000:.0f} kWh")
+                  f" | total ({(r['gaz'] + r['elec_pac']) / 1000 / r['ref'] - 1:+.0%}) | report final {r['reste'] / 1000:.0f} kWh"
+                  + (f" | MTA : élec ch {(r['elec_pac'] - r['elec_ecs']) / 1000 / s:.2f}, élec ECS {r['elec_ecs'] / 1000 / s:.2f} kWh/m², pertes réseau + modules {r['pertes_reseau'] / 1000:.0f} kWh, auxiliaires {r['waux_reseau'] / 1000:.0f} kWh" if "elec_ecs" in r else ""))
             tot += r["gaz"] + r["elec_pac"]; ref_tot += r["ref"]
             continue
         print(f"génération {id_gen} : {nom} sys {r['sys']} | zones {r['groupes']} | demande {r['demande'] / 1000:6.0f} kWh | fournie PAC {r['fourni'] / 1000:6.0f}"

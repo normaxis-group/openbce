@@ -103,7 +103,8 @@ def comparer(chemin: str) -> dict:
         if r is None:
             non_modelise.append(f"chauffage génération {id_gen} ({nom})")
             continue
-        postes["ch"] += (r["elec_pac"] + r["elec_joule"]) / 1000
+        postes["ch"] += (r["elec_pac"] + r["elec_joule"] - r.get("elec_ecs", 0.0)) / 1000
+        postes["ecs"] += r.get("elec_ecs", 0.0) / 1000                   # réseau mixte MTA : électricité des heures sans chauffage
         repartir(r.get("elec_h", np.zeros(n)), r.get("groupes"))
         if "gaz" in r:
             postes["ch"] += (r["gaz"] - r["gaz_ecs"]) / 1000
@@ -122,7 +123,7 @@ def comparer(chemin: str) -> dict:
     demande_ecs_tot = sum(d for _, _, d, _ in resultats) or 1.0
     for id_gen, asm, demande, r in resultats:
         if r is None:
-            if asm == "sans ballon" and ecs_chaudieres > 0:
+            if (asm == "sans ballon" and ecs_chaudieres > 0) or (isinstance(asm, str) and asm.startswith("MTA")):
                 # production instantanée par une chaudière double service : son ECS est déjà comptée avec le chauffage
                 # (gaz_ecs). Sans ce test, cas 24, cas 09 et cas 25 la comptaient deux fois (cas 24 : Cep 58,8 -> 102,2).
                 continue

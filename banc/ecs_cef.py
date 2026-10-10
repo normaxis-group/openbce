@@ -45,6 +45,10 @@ def comparer(chemin: str, rapide: bool = False):
     cal = calendrier.construire()
     n = len(cl.te)
     dps = {d.entier("Index"): d.entier("Id_Gen") for d in p.entree.tous("Distribution_Intergroupe_ECS")}
+    gens_mta = set()                                                     # réseaux mixtes MTA (16.8) : ECS comptée avec le chauffage (banc.pac_chauffage)
+    for m in p.entree.tous("T5_Cardonnel_ModuleAppartement_Mixte"):
+        dps[m.entier("Index")] = m.entier("Id_Gen", 0)
+        gens_mta.add(m.entier("Id_Gen", 0))
     # RSEE sans nœud Distribution_Intergroupe_ECS (cas 15) : les émetteurs ECS sont rattachés à l'unique génération à ballon
     _gens_ballon = [g.entier("Index") for g in p.entree.directs("Generation") if g.directs("Production_Stockage")]
     if not dps and len(_gens_ballon) == 1:
@@ -101,6 +105,9 @@ def comparer(chemin: str, rapide: bool = False):
     for gen in p.entree.directs("Generation"):
         id_gen = gen.entier("Index")
         if id_gen not in demandes:
+            continue
+        if id_gen in gens_mta:
+            resultats.append((id_gen, "MTA : ECS comptée avec le chauffage (16.8)", demandes[id_gen].sum(), None))
             continue
         ps_list = gen.directs("Production_Stockage")
         if not ps_list:
