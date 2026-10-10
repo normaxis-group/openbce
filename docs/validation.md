@@ -41,7 +41,7 @@ Le banc compare, poste par poste, ce que calcule OpenBCE aux sorties que porte l
 | Bbio_max et modulations | 732 groupes | Mbgeo exact partout ; DH_max exact sur 761 groupes |
 | Besoins d'eau chaude sanitaire | 182 groupes | rapport médian 1,002 à 1,003 |
 | DH, confort d'été | 12 groupes de 8 opérations | 8 dans ±10 %, biais de +10 à +15 % ; rafraîchissement adiabatique non modélisé |
-| Cep | 50 opérations (électricité, gaz, réseaux) | écart médian -0,2 % ; écart absolu médian 1,5 % ; 34 dans ±5 % ; 49 dans ±10 % ; seule hors de ±10 % : une opération dont le RSEE est incohérent (mensuels sans rapport avec l'annuel) |
+| Cep | 50 opérations (électricité, gaz, réseaux) | hors production locale : écart médian -0,2 %, écart absolu médian 1,5 %, 34 dans ±5 %, 49 dans ±10 % ; avec l'autoconsommation photovoltaïque, contre O_Cep_annuel (valeur réglementaire) : écart médian -0,1 %, écart absolu médian 2,4 %, 49 dans ±10 % (10/10/2026) ; seule hors de ±10 % : une opération dont le RSEE est incohérent (mensuels sans rapport avec l'annuel) |
 
 Le bilan du Cep est reproductible avec `python -m banc.cep_lot <dossier de RSEE>`.
 

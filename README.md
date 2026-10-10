@@ -47,8 +47,9 @@ Il sert à relire et contrôler un calcul réglementaire, à étudier la sensibi
 - Ne couvre pas encore : indicateurs carbone (Ic), solaire thermique, espaces tampons, ventilation naturelle et puits
   climatiques, PAC à sources eau et sol, bois et cogénération, systèmes sous Titre V.
 
-Résultats de validation au 09/10/2026, sur 50 opérations réelles : Cep à -0,2 % en médiane, écart absolu médian 1,5 %,
-49 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones. Détail, protocole et écarts connus :
+Résultats de validation au 10/10/2026, sur 50 opérations réelles : Cep (production photovoltaïque comprise) à -0,1 % en
+médiane, écart absolu médian 2,4 %, 49 opérations dans ±10 % ; Bbio du logement à +0,1 % en médiane sur 167 zones ;
+seuils réglementaires des usages 1 à 5 retrouvés sur 113 016 zones de l'observatoire OPEE. Détail, protocole et écarts connus :
 [docs/validation.md](docs/validation.md).
 
 ## Documentation

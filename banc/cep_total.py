@@ -135,11 +135,18 @@ def comparer(chemin: str) -> dict:
     pv_prod, pv_ac = np.zeros(n), np.zeros(n)
     ac_hors_mob = 0.0                                                        # kWh autoconsommés par les postes du Cep
     pv_par_bat = {}                                                          # index de bâtiment -> (production, autoconsommée, dont postes du Cep), kWh
-    if any(bat.tous("PV_install") for bat in p.entree.directs("Batiment")):
+    pv_projet = [i for i in p.entree.tous("PV_install") if not any(i is j for bat in p.entree.directs("Batiment") for j in bat.tous("PV_install"))]
+    if pv_projet or any(bat.tous("PV_install") for bat in p.entree.directs("Batiment")):
         cl = climat.du_site(meteo.charger(METEO, zone_climatique(p)), simu.texte("Departement"), alt)
+        # installations déclarées au niveau du projet (2525, 2526) : réparties entre bâtiments au prorata des consommations horaires
+        prod_projet = np.zeros(n)
+        for inst in pv_projet:
+            for o in inst.directs("Onduleur_PV"):
+                prod_projet += photovoltaique._onduleur(cl, o)
+        w_projet = sum((w_elec[b.entier("Index")] + w_mob[b.entier("Index")]) for b in p.entree.directs("Batiment"))
         for bat in p.entree.directs("Batiment"):
-            prod = photovoltaique.du_batiment(bat, cl)
             w_e, w_m = w_elec[bat.entier("Index")], w_mob[bat.entier("Index")]
+            prod = photovoltaique.du_batiment(bat, cl) + prod_projet * np.divide(w_e + w_m, w_projet, out=np.zeros(n), where=w_projet > 0)
             w_tous = w_e + w_m
             ac = np.minimum(prod, w_tous)
             tap = np.divide(ac, w_tous, out=np.zeros(n), where=w_tous > 0)
