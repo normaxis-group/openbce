@@ -3,7 +3,9 @@
 """Banc de la production photovoltaïque : par bâtiment, production annuelle et mensuelle calculée contre O_Eef_Prod_PV
 (kWh par m² de SREF) des RSEE.
 
-    python -m banc.pv <dossier de RSEE | fichiers>
+    python -m banc.pv <dossier de RSEE | fichiers> [--tous]
+
+Sur un dossier, un seul RSEE (le plus petit) par opération ; `--tous` les garde tous, variantes comprises.
 """
 import json
 import statistics
@@ -18,13 +20,14 @@ from openbce import climat, meteo, photovoltaique, rsee
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     cibles = []
-    for a in sys.argv[1:]:
+    tous = "--tous" in sys.argv
+    for a in (x for x in sys.argv[1:] if x != "--tous"):
         p = Path(a)
         if p.is_dir():
             lot = json.loads((p / "_lot.json").read_text(encoding="utf-8"))["fichiers"]
             vus = set()
             for x in sorted(lot, key=lambda x: x["octets"]):
-                if x["projet"] not in vus and "<PV_install>" in (p / x["fichier"]).read_text(encoding="utf-8", errors="replace"):
+                if (tous or x["projet"] not in vus) and "<PV_install>" in (p / x["fichier"]).read_text(encoding="utf-8", errors="replace"):
                     vus.add(x["projet"])
                     cibles.append(p / x["fichier"])
         else:
