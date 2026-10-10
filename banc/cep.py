@@ -34,10 +34,12 @@ def reseaux_chaud(g, b_tampons=None):
 
 def _thc(zone, g, usage, sc_g, cl, ch_impose=None, fr_impose=None, b_tampons=None):
     vent = ventilation.du_groupe(zone, g, usage, sc_g.ventilation)
+    surface = g.nombre("SHAB") if usage in (1, 2) else g.nombre("SU")
     return groupe.ThC(vent, aeraulique.entrees_air(zone, g), emission.equivalent(g, True), emission.equivalent(g, False),
                       emission.relance(sc_g.consigne_ch, g.entier("Type_Pgrm_Ch", 1), cl.te, float(np.min(cl.base_ext)), True, sc_g.etat_ch),
                       emission.relance(sc_g.consigne_fr, g.entier("Type_Pgrm_Fr", 1), cl.te, float(np.min(cl.base_ext)), False, sc_g.etat_fr),
-                      g.entier("Is_Climatise", 0) == 1, ch_impose, fr_impose, reseaux_chaud(g, b_tampons))
+                      g.entier("Is_Climatise", 0) == 1, ch_impose, fr_impose, reseaux_chaud(g, b_tampons),
+                      brasseurs.lire(g, usage, surface), g.nombre("V", 2.5 * surface))
 
 
 def saisons_batiment(bat, cl, cal, b_tampons=None):
@@ -98,10 +100,12 @@ def comparer(chemin: str):
                 sc_g = dataclasses.replace(sc, occupants=sc.occupants * part, apports_occupants=sc.apports_occupants * part,
                                            apports_usages=sc.apports_usages * part, nadeq=sc.nadeq * part)
                 s = sorties.get((bat.entier("Index"), zone.entier("Index"), g.entier("Index")))
-                aux_h = consommation.puissance_ventilateurs(zone, g, usage, sc_g.ventilation)
-                aux = aux_h.sum() / 1000 / surface
                 thc = _thc(zone, g, usage, sc_g, cl, union_ch, union_fr, b_tampons)
                 b = groupe.calculer(g, usage, cl, cal, sc_g, b_tampons, aeraulique.du_groupe(zone, g), thc=thc)
+                aux_h = consommation.puissance_ventilateurs(zone, g, usage, sc_g.ventilation)
+                if b.brasseurs_w is not None:                                         # brasseurs d'air (8.32) : avec les auxiliaires de ventilation
+                    aux_h = aux_h + b.brasseurs_w
+                aux = aux_h.sum() / 1000 / surface
                 ecl = b.eclairage.sum() / 1000 / surface
                 ref = lambda k: s.nombre(k, float("nan")) if s else float("nan")
                 try:
