@@ -49,6 +49,11 @@ CIBLE_FROID_CORRIGEE = True
 # Essai (08/10) : en Th-C, un groupe climatisé n'ouvre jamais ses baies (et pas seulement en saison de refroidissement) ;
 # avant la saison, l'ouverture rafraîchit le groupe et retarde le démarrage de la saison (cas 03 : juin 1,3 pour 6,9).
 OUVERTURE_CLIMATISE_JAMAIS = False
+# Essai (11/10, bureaux climatisés de cas 39) : le texte (5.13.1) exclut la surventilation naturelle « au cours de la saison de
+# refroidissement » des bâtiments rafraîchis, mais la référence y ouvre les baies (besoin Th-C 9,0 pour 13,2 au Th-B). Modes :
+# 0 fermé toute la saison (texte) ; 1 ouverture comme un groupe non climatisé ; 2 ouverture aux heures sans refroidissement
+# au pas précédent ; 3 ouverture en inoccupation seulement (part automatique).
+OUVERTURE_CLIMATISE_MODE = 0
 # Part des pertes des réseaux du groupe rendue au groupe à l'heure suivante (11.1 : 1,0) ; sert aux essais du banc.
 RECUP_RESEAU = 1.0
 CIBLE_CHAUD_CORRIGEE = True
@@ -291,7 +296,14 @@ def calculer(groupe: Noeud, usage: int, climat: Climat, cal: Calendrier, sc: Sce
             else:
                 r_ouv = [0.0] * len(r_ouv)                             # (245)
                 ratios = r_ouv
-            if thc and thc.climatise and (froid_autorise or OUVERTURE_CLIMATISE_JAMAIS):
+            ferme_clim = thc is not None and thc.climatise and (froid_autorise or OUVERTURE_CLIMATISE_JAMAIS)
+            if ferme_clim and OUVERTURE_CLIMATISE_MODE == 1:
+                ferme_clim = False
+            elif ferme_clim and OUVERTURE_CLIMATISE_MODE == 2:
+                ferme_clim = h > 0 and bfr[h - 1] > 0
+            elif ferme_clim and OUVERTURE_CLIMATISE_MODE == 3:
+                ferme_clim = bool(occupe)
+            if ferme_clim:
                 # Fiche 5.13 : l'ouverture des baies est incompatible avec le refroidissement ; dans les bâtiments
                 # rafraîchis, pas de surventilation naturelle en saison de refroidissement (le Th-B fait exception).
                 ratios = [0.0] * len(ratios)

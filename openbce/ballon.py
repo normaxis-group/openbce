@@ -91,8 +91,10 @@ class Ballon:
     @classmethod
     def depuis(cls, ps: Noeud, pos_gen: int = 1) -> "Ballon":
         vtot = ps.nombre("V_tot", 0.0)
+        # Statut_faux 1 : valeur saisie, 2 : défaut 0,5 (9.9.3) ; une fraction saisie nulle ou totale (cas 40 : f_aux 0 avec
+        # statut 0, hors nomenclature) ne définit aucune zone d'appoint : quatre zones égales, comme un ballon base seule
         faux = ps.nombre("f_aux", 0.5) if ps.entier("Statut_faux", 2) != 2 else 0.5
-        if ps.entier("Type_prod_stockage", 0) in (1, 2) and ps.entier("Type_accumulateur_ECS", 0) == 0:
+        if ps.entier("Type_prod_stockage", 0) in (1, 2) and ps.entier("Type_accumulateur_ECS", 0) == 0 and 0.0 < faux < 1.0:
             v = [(1 - faux) * vtot / 2] * 2 + [faux * vtot / 2] * 2                    # base en bas, appoint en haut
         else:
             v = [vtot / 4] * 4

@@ -37,7 +37,7 @@ Le banc compare, poste par poste, ce que calcule OpenBCE aux sorties que porte l
 |---|---|---|
 | Surfaces et déperditions par transmission | 732 zones | 99 à 100 % dans la tolérance de 1 % |
 | Bbio, logement | 167 zones | écart médian +0,1 % ; 160 zones dans ±5 % |
-| Bbio, bureaux | 3 opérations | dans ±1 % |
+| Bbio, bureaux | 6 opérations (dont trois rapatriées du NAS le 11/10/2026 : cas 39 bureaux seuls, cas 40 et cas 41 mixtes) | dans ±1,2 % sur les zones de bureaux, chauffage et froid compris |
 | Bbio_max et modulations | 732 groupes | Mbgeo exact partout ; DH_max exact sur 761 groupes |
 | Ic énergie (annexe II, 4.3.2) | 9 bâtiments de 4 opérations dont le RSEE porte la partie environnementale | recalculé depuis les énergies importées du récapitulatif énergétique : rapport médian 0,999, de 0,998 à 1,003 ; seuil Ic énergie_max : facteur de modulation identique à celui des seuils Cep à 0,0005 près sur les 9 bâtiments ; sur les 113 016 zones de l'OPEE, Ic énergie_maxmoyen retrouvé à 99,2 % (maisons), 99,0 % (collectif), 94,9 % (bureaux), 99,5 et 100 % (enseignement), facteur de modulation égal à celui du Cep à 0,5 % près sur 92 à 99 % des zones (`banc.opee_exigences`) |
 | Besoins d'eau chaude sanitaire | 182 groupes | rapport médian 1,002 à 1,003 |
@@ -48,6 +48,16 @@ Le bilan du Cep est reproductible avec `python -m banc.cep_lot <dossier de RSEE>
 
 ## Écarts connus et non expliqués
 
+- **Froid Th-C des bureaux climatisés de cas 39** (11/10/2026, `brut/thc_froid_bureaux_p00833*.txt`) : besoin Th-B exact (13,3 pour
+  13,2) mais Th-C à 14,5 pour 9,0 (+61 %) sur les trois bâtiments ; la référence refroidit moins en Th-C qu'en Th-B, 359 h
+  dans l'année contre 593 chez nous, PAC jamais saturée. Ni les débits d'inoccupation, ni la cible de puissance, ni les
+  saisons ne l'expliquent ; seule l'ouverture des baies en saison de refroidissement (gestion automatique en
+  inoccupation) donne le profil de la référence (7,3 pour 9,0). Mais la même ouverture ruine cas 11 (9,5 pour 18,7, juste
+  sans), le coworking de cas 40 (23,4 pour 23,0 sans) et les logements climatisés de cas 23 ; les quatre bâtiments ont des
+  baies en gestion automatique par défaut. Différences restantes : cas 39 et les bureaux de cas 23 sont en simple flux
+  avec des émetteurs à variation temporelle de statut 0, cas 11 et cas 40 en double flux avec le statut 2. Le texte
+  (5.13.1) ferme les baies des bâtiments rafraîchis toute la saison : règle gardée (`groupe.OUVERTURE_CLIMATISE_MODE = 0`,
+  modes 1 à 3 codés pour l'essai), cas 39 à +8 % de Cep ; à trancher par une variante Pleiades (baies non ouvrables).
 - **Froid des logements climatisés en mode Th-C** : -13 à -33 % alors que le besoin Th-B est exact. Deux composantes :
   le démarrage de la saison de froid (certaines références démarrent au 1er juillet sans déclenchement préalable, le
   critère n'est pas identifié) et un niveau d'été trop bas de 14 à 17 %, probablement lié au débit d'air neuf des
@@ -137,12 +147,12 @@ renouvelable ; réseau 1 et 1 - RatENR ; fossiles 1), hors usages mobiliers (éq
 | PAC électriques chauffage et froid (8.23) : air ext/eau, air ext/air recyclé, multiservices | `thermodynamique.py` | `banc.pac_chauffage` | air/air : cas 01 +7 %, cas 03 +7 %, cas 04 -18 % (besoins) ; air/eau avec réseaux : cas 05 +0 %, cas 06 +8 %, cas 07 +11 %, cas 08 +29 % |
 | Distribution hydraulique (8.7 à 8.10) et pertes récupérables rebouclées heure par heure dans le modèle thermique (11.1) | `distribution.py`, `groupe.py` | `banc.pac_chauffage` | cas 05 +0 %, cas 09 -2 %, cas 10 +1 %, cas 08 +0 % |
 | PAC double et triple service (8.23, 1294) : le temps d'ECS réduit la puissance fournie, lettre du texte (le COP de chauffage baisse au prorata) | `thermodynamique.py` | `banc.pac_chauffage` | cas 05 -0 %, T.ONE triple service -7 à -9 % ; cas 06 +25 % et cas 08 +20 % (la réduction de Pabs, option `MULTISERVICE_PABS_REDUIT`, les ramène à +5 et 0 % mais casse les autres) |
-| Froid réel des groupes climatisés : besoins Th-C (pas d'ouverture des baies, cible brute (803)), PAC mode froid | `groupe.py`, `thermodynamique.py` | `banc.pac_froid` | bureaux cas 11 : besoin 17,1 pour 18,7 ; cas 03 et cas 04 (PAC air/air) à remesurer |
+| Froid réel des groupes climatisés : besoins Th-C (pas d'ouverture des baies en saison de refroidissement, 5.13.1), PAC mode froid | `groupe.py`, `thermodynamique.py` | `banc.pac_froid` | bureaux cas 11 : besoin 16,7 pour 18,7 ; coworking de cas 40 : 23,4 pour 23,0 ; cas 39 (trois bâtiments de bureaux, PAC air/air, simple flux) : 14,5 pour 9,0, voir « Écarts connus » |
 | Réseaux de chaleur et de froid (8.28) : sous-station en génération ou en base de ballon, énergie « réseau » | `reseau_fourniture.py` | `banc.cep_total` | cas 11 bureaux (réseau de froid) : froid 17,1/18,7 ; cas 12 (réseau de chaleur en base de ballon, 3 bâtiments) : Cep -1 % (chauffage -10 %, ECS +5 %) |
 | Relances (8.5) : durées selon Type_Pgrm et l'indicateur de consigne du scénario | `emission.py`, `scenarios.py` | `banc.cep` | tests unitaires |
 | Double flux : statut de l'efficacité d'échangeur (certifié 2, justifié 1, déclaré 0), bypass selon θext et θi (6.3) | `ventilation.py`, `groupe.py` | `banc.cep` | cas 13 (ε 0,8) : besoin Th-C 8,1 -> 7,4 pour 6,4 |
 | Chaudières gaz et fioul (8.19) : rendements, pertes à l'arrêt, auxiliaires, ECS instantanée + chauffage, base ou appoint de ballon | `chaudiere.py`, `generateurs_ballon.py` | `banc.pac_chauffage`, `banc.ecs_cef` | 12 projets gaz (chauffage + ECS) : tous dans ±7 % ; ballon à base chaudière cas 14 -0 % ; assemblage à deux ballons (type 2) : cas 15 ECS -11 % |
-| Cep complet d'un projet (chauffage, froid, ECS, éclairage, auxiliaires, forfait froid, déplacements lus) | tous | `banc.cep_total`, `banc.cep_lot` | lot de 50 projets (électricité, gaz, réseaux) au 09/10/2026 : écart médian -0,2 %, \|écart\| médian 1,5 %, 34 dans ±5 %, 49 dans ±10 % ; hors : cas 15 (RSEE incohérent) ; cas 16 (ECS d'un ballon sans source dans le RSEE) prise de la référence et signalée, à -3 % |
+| Cep complet d'un projet (chauffage, froid, ECS, éclairage, auxiliaires, forfait froid, déplacements lus) | tous | `banc.cep_total`, `banc.cep_lot` | trois opérations de bureaux ajoutées le 11/10/2026 hors lot : cas 41 -4 %, cas 40 +4 %, cas 39 +8 % (froid, voir « Écarts connus ») ; lot de 50 projets (électricité, gaz, réseaux) au 09/10/2026 : écart médian -0,2 %, \|écart\| médian 1,5 %, 34 dans ±5 %, 49 dans ±10 % ; hors : cas 15 (RSEE incohérent) ; cas 16 (ECS d'un ballon sans source dans le RSEE) prise de la référence et signalée, à -3 % |
 | Génération : contrat d'appel, effet joule direct (8.18) | `generateurs.py` | `banc.chauffage_mois` | identité vérifiée : O_Cef_ch = O_B_Ch sur 46 groupes effet joule du lot |
 | Besoin de chauffage Th-C (ventilation réelle, fuites de conduits, émission, relance) | `groupe.py`, `ventilation.py` | `banc.chauffage_mois` | 47 groupes effet joule : collectifs dans ±4 % après lecture « par défaut » de la classe d'étanchéité 3 ; restent les maisons de cas 17 (+9 à +13 %), cas 18 (+16 à +29 %) et cas 13 (+16 %) |
 | Consignes corrigées Th-C (8.1) : θvt appliqué seulement aux émetteurs de statut 2 (valeur par défaut écrite), θvs non appliqué, cibles de puissance corrigées en chaud et en froid | `emission.py`, `groupe.py` | `banc.cep` | tranché au banc contre la lettre du texte : bureaux cas 11 36,4/36,2, cas 19 +6 %, cas 04 +4 à +11 %, cas 03 +2 %, effet joule cas 20 +0/-3 % ; froid des logements climatisés encore -13 à -33 % |
