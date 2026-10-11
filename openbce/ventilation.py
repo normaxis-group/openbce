@@ -46,6 +46,14 @@ DP_HP_DEFAUT = 250.0
 RATFUITEVC = {1: 0.25, 2: 0.5}
 RATSURFCOND, RATDEBCOND = 0.05, 0.05
 FUITES_RESEAU = True
+# Signe des fuites en volume chauffé sur le débit soufflé au groupe : +1 est la lettre de l'équation 429 (les fuites du
+# conduit de soufflage situées en volume chauffé entrent au groupe), -1 les retranche (lecture d'origine), 0 les ignore.
+# Mesure du 11/10/2026 (lots 17 et 19, huit opérations à soufflage) : +1 règle les bureaux de cas 23 (deux simple flux,
+# besoin de chauffage 17,9 pour 17,1 contre 10,4) mais dégrade les trois opérations à double flux (cas 11 de -1 à -13 % de
+# Cep, cas 13 de 0 à -5 %, cas 01 de 0 à -4 %), où le déséquilibre soufflage-reprise de l'ancienne lecture fait entrer par
+# l'enveloppe un air neuf non récupéré que la référence compte visiblement. Lecture d'origine gardée par défaut, à trancher
+# par variante Pleiades (cahier, série 9).
+FUITES_SOUFFLAGE = -1.0
 
 
 @dataclass(frozen=True)
@@ -84,8 +92,10 @@ def _debit_bouche(b: Noeud, usage: int, sens: str, ventilation: np.ndarray) -> n
 
 
 def _fuites(b: Noeud, usage: int, sens: str, q: np.ndarray, surface: float) -> np.ndarray:
-    """Part des fuites du réseau prélevée dans le volume chauffé, m³/h (430 à 438) : elle s'ajoute au débit extrait
-    du groupe (reprise) ou s'en retranche (soufflage)."""
+    """Part des fuites du réseau située en volume chauffé, m³/h (419, 420, 428, 429) : elle s'ajoute au débit extrait
+    du groupe (reprise) comme au débit qui y entre (soufflage) ; les fuites hors volume chauffé ne sont vues que par le
+    ventilateur (430, 431). Le signe appliqué au soufflage est FUITES_SOUFFLAGE (voir ce commentaire) : avec -1, le
+    soufflage peut devenir négatif en inoccupation (bureaux de cas 23 : 56 m³/h déclarés, -191 calculés)."""
     if not FUITES_RESEAU:
         return np.zeros_like(q)
     if b.entier(f"valeur_surface_conduit_{sens}", 0) == 1 and b.nombre(f"A_cond_{sens}", 0.0) > 0:
@@ -110,7 +120,7 @@ def du_groupe(zone: Noeud, groupe: Noeud, usage: int, ventilation: np.ndarray) -
     for b in groupe.directs("Bouche_Conduit"):
         if b.entier("Type_Bouche_Conduit", 0) == 1:                                     # soufflage
             q = _debit_bouche(b, usage, "souf", ventilation)
-            souffle += q - _fuites(b, usage, "souf", q, surface)
+            souffle += q + FUITES_SOUFFLAGE * _fuites(b, usage, "souf", q, surface)   # (429) : les fuites en volume chauffé entrent au groupe
         else:
             q = _debit_bouche(b, usage, "rep", ventilation)
             repris += q + _fuites(b, usage, "rep", q, surface)

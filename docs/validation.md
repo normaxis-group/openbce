@@ -48,6 +48,13 @@ Le bilan du Cep est reproductible avec `python -m banc.cep_lot <dossier de RSEE>
 
 ## Écarts connus et non expliqués
 
+- **Fuites des conduits de soufflage** (11/10/2026, lot 19 `brut/cep_lot19_fuites_souf.txt`) : l'équation 429 ajoute au débit
+  soufflé la part des fuites en volume chauffé ; le moteur la retranche depuis l'origine (`ventilation.FUITES_SOUFFLAGE = -1`),
+  ce qui déséquilibre soufflage et reprise et fait entrer par l'enveloppe un air neuf non récupéré. La lettre du texte règle
+  les bureaux de cas 23 (deux systèmes simple flux : besoin de chauffage 17,9 pour 17,1, contre 10,4) mais dégrade les trois
+  opérations à double flux du lot (cas 11 de -1 à -13 % de Cep, cas 13 de 0 à -5 %, cas 01 de 0 à -4 %) ; au lot, l'écart
+  absolu médian passe de 1,5 à 2,2 % et cas 11 sort de ±10 %. Lecture d'origine gardée, option +1 disponible ; variante
+  Pleiades (classe d'étanchéité A, surfaces de conduit nulles) au cahier, série 9.
 - **Froid Th-C des bureaux climatisés de cas 39** (11/10/2026, `brut/thc_froid_bureaux_p00833*.txt`) : besoin Th-B exact (13,3 pour
   13,2) mais Th-C à 14,5 pour 9,0 (+61 %) sur les trois bâtiments ; la référence refroidit moins en Th-C qu'en Th-B, 359 h
   dans l'année contre 593 chez nous, PAC jamais saturée. Ni les débits d'inoccupation, ni la cible de puissance, ni les
